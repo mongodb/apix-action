@@ -1,0 +1,35 @@
+name: 'Find Jira Issue'
+description: 'Find Jira Issue'
+inputs:
+  token:
+    description: "Token to connect to Jira"
+    required: true
+  jql:
+    description: "JQL query to run"
+    required: true
+outputs:
+  found:
+    description: "returns 'true' if issue is found otherwise 'false'"
+    value: ${{ steps.find.outputs.FOUND }}
+  issue-key:
+    description: "key of the issue found"
+    value: ${{ steps.find.outputs.KEY }}
+runs:
+  using: "composite"
+  steps:
+    - id: find
+      shell: bash
+      env:
+        JIRA_API_TOKEN: ${{ inputs.token }}
+        QUERY: ${{ inputs.jql }}
+      run: |
+        json_response=$(curl --request POST \
+          --url 'https://jira.mongodb.org/rest/api/2/search' \
+          --header 'Authorization: Bearer '"${JIRA_API_TOKEN}" \
+          --header 'Accept: application/json' \
+          --header 'Content-Type: application/json' \
+          --data '{
+            "jql": "${QUERY}",
+          }')
+        echo "KEY=$(echo "${json_response}" | jq -c '.issues[] | .key' | head -n 1)" >> "$GITHUB_OUTPUT"
+        echo "FOUND=$(echo "${json_response}" | jq -c '[.issues] | flatten | any')" >> "$GITHUB_OUTPUT"

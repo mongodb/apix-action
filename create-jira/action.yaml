@@ -1,0 +1,28 @@
+name: 'Create Jira Issue'
+description: 'Create Jira Issue'
+inputs:
+  token:
+    description: "Token to connect to Jira"
+    required: true
+  project-key:
+    description: "Project Key"
+    required: true
+  summary:
+    description: "Summary of the issue"
+    required: true
+  description:
+    description: "Description of the issue"
+  issuetype:
+    description: "Name of the issue type"
+  labels:
+    description: "Labels for the issue. Comma separated."
+  components:
+    description: "Components for the issue. Comma separated."
+  extra-data:
+    description: "Extra data to be merged in the final request."
+outputs:
+  issue-key:
+    description: "key of the issue found"
+runs:
+  using: "node20"
+  main: "index.js"
