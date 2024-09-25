@@ -24,7 +24,7 @@ runs:
         QUERY: ${{ inputs.jql }}
       run: |
         request="{
-          \"jql\": \"${QUERY}\",
+          \"jql\": \"${QUERY}\"
         }"
         echo "REQUEST=${request}"
         json_response=$(curl --request POST \
