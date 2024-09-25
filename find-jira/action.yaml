@@ -31,5 +31,6 @@ runs:
           --data '{
             "jql": "${QUERY}",
           }')
+        echo "${json_response}"
         echo "KEY=$(echo "${json_response}" | jq -c '.issues[] | .key' | head -n 1)" >> "$GITHUB_OUTPUT"
         echo "FOUND=$(echo "${json_response}" | jq -c '[.issues] | flatten | any')" >> "$GITHUB_OUTPUT"
