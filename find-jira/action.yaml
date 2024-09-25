@@ -26,13 +26,11 @@ runs:
         request="{
           \"jql\": \"${QUERY}\"
         }"
-        echo "REQUEST=${request}"
         json_response=$(curl --request POST \
           --url 'https://jira.mongodb.org/rest/api/2/search' \
           --header 'Authorization: Bearer '"${JIRA_API_TOKEN}" \
           --header 'Accept: application/json' \
           --header 'Content-Type: application/json' \
           --data "$request")
-        echo "RESPONSE=${json_response}"
         echo "KEY=$(echo "${json_response}" | jq -c '.issues[] | .key' | head -n 1)" >> "$GITHUB_OUTPUT"
-        echo "FOUND=$(echo "${json_response}" | jq -c '[.issues] | flatten | any')" >> "$GITHUB_OUTPUT"
+        echo "FOUND=$(echo "${json_response}" | jq -c '[.issues[]] | any')" >> "$GITHUB_OUTPUT"
