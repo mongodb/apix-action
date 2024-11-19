@@ -67,8 +67,8 @@ function main() {
       if (err != null) {
         return core.setFailed(err);
       }
+      console.info("received: " + JSON.stringify(responseBody));
       if (response.statusCode >= 400) {
-        console.error(responseBody);
         return core.setFailed(response.statusCode + " " + response.statusMessage);
       }
       core.setOutput("issue-key", responseBody.key);
