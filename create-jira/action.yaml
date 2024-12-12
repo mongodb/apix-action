@@ -14,6 +14,8 @@ inputs:
     description: "Description of the issue"
   issuetype:
     description: "Name of the issue type"
+  assignee:
+    description: "Assignee of the issue"
   labels:
     description: "Labels for the issue. Comma separated."
   components:

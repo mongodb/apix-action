@@ -25,6 +25,7 @@ function main() {
     const issuetype = core.getInput('issuetype');
     const labels = core.getInput('labels');
     const components = core.getInput('components');
+    const assignee = core.getInput('assignee');
     const extraData = core.getInput('extra-data');
     const labelList = labels.split(",").filter(value => value != "")
     const componentList = components.split(",").filter(value => value != "")
@@ -35,6 +36,9 @@ function main() {
     }
     if (issuetype != "") {
       body["fields"]["issuetype"] = {"name": issuetype};
+    }
+    if (assignee != "") {
+      body["fields"]["assignee"] = {"name": assignee};
     }
     if (labelList.length != 0) {
       body["fields"]["labels"] = labelList;
