@@ -1,0 +1,32 @@
+name: 'Verify Changed Files'
+description: 'GitHub Action to check if files have changed and output the results'
+author: 'APIX Team'
+inputs:
+  files:
+    description: 'Files or patterns to check for changes'
+    required: true
+  base-ref:
+    description: 'Base git ref to compare changes against (default: previous commit)'
+    required: false
+    default: 'HEAD^'
+  head-ref:
+    description: 'Head git ref to compare changes with (default: current commit)'
+    required: false
+    default: 'HEAD'
+  separator:
+    description: 'Separator for the output list of changed files'
+    required: false
+    default: ' '
+outputs:
+  changed_files:
+    description: 'List of all changed files'
+  any_changed:
+    description: 'Boolean indicating if any files have changed (true/false)'
+  all_changed:
+    description: 'Boolean indicating if all specified files have changed (true/false)'
+runs:
+  using: 'node20'
+  main: 'dist/index.js'
+branding:
+  icon: 'search'
+  color: 'blue'
