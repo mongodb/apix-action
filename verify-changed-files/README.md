@@ -6,7 +6,7 @@ A GitHub Action to check if specified files have changed between git refs and ou
 
 | Name | Description | Required | Default |
 |------|-------------|----------|---------|
-| `files` | Files or patterns to check for changes | Yes | N/A |
+| `files` | Files or patterns to check for changes | No | `.` (entire repository) |
 | `base-ref` | Base git ref to compare changes against | No | `HEAD^` |
 | `head-ref` | Head git ref to compare changes with | No | `HEAD` |
 | `separator` | Separator for the output list of changed files | No | ` ` (space) |
@@ -51,5 +51,17 @@ jobs:
         run: |
           echo "The following files have changed: ${{ steps.verify_changed.outputs.changed_files }}"
           # Run your build, test or deploy commands here
+```
+
+## Example with Default Files (Entire Repository)
+```yaml
+- name: Check Any Changes
+  id: verify_any_changes
+  uses: your-org/verify-changed-files@v1
+  # No files input means check entire repository
+
+- name: Run if any file changed
+  if: steps.verify_any_changes.outputs.any_changed == 'true'
+  run: echo "Something changed in the repository!"
 ```
 

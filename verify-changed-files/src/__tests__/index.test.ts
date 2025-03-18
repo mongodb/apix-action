@@ -109,6 +109,46 @@ describe('verify-changed-files action', () => {
     expect(mockSetOutput).toHaveBeenCalledWith('all_changed', 'false');
   });
 
+  test('uses default value when files input is not provided', async () => {
+    // Reset mocks to clear previous test state
+    jest.resetAllMocks();
+
+    // Setup core mocks without files input
+    mockGetInput = jest.spyOn(core, 'getInput').mockImplementation((name) => {
+      switch (name) {
+        case 'files':
+          return '';  // Empty input to test default behavior
+        case 'base-ref':
+          return 'HEAD^';
+        case 'head-ref':
+          return 'HEAD';
+        case 'separator':
+          return ' ';
+        default:
+          return '';
+      }
+    });
+    mockSetOutput = jest.spyOn(core, 'setOutput').mockImplementation();
+    mockInfo = jest.spyOn(core, 'info').mockImplementation();
+    
+    // Mock exec with some changed files
+    mockExec = jest.spyOn(exec, 'exec').mockImplementation(async (cmd, args, options) => {
+      // When checking the entire repo, return some files
+      if (args && args.includes('diff') && !args.includes('--')) {
+        options?.listeners?.stdout?.(Buffer.from('README.md\nLICENSE'));
+      } else if (args && args.includes('--') && args.includes('.')) {
+        options?.listeners?.stdout?.(Buffer.from('README.md\nLICENSE'));
+      }
+      return 0;
+    });
+    
+    await run();
+    
+    // Check outputs for default behavior
+    expect(mockSetOutput).toHaveBeenCalledWith('changed_files', expect.stringContaining('README.md'));
+    expect(mockSetOutput).toHaveBeenCalledWith('any_changed', 'true');
+  });
+
   test('handles errors gracefully', async () => {
     // Reset mocks to clear previous test state
     jest.resetAllMocks();

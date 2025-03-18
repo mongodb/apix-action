@@ -5,7 +5,7 @@ import { exec } from '@actions/exec';
 export async function run(): Promise<void> {
   try {
     // Get inputs
-    const files = core.getInput('files', { required: true });
+    const files = core.getInput('files') || '.'; // Default to entire repo if not specified
     const baseRef = core.getInput('base-ref') || 'HEAD^';
     const headRef = core.getInput('head-ref') || 'HEAD';
     const separator = core.getInput('separator') || ' ';
