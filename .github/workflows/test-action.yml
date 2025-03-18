@@ -73,3 +73,45 @@ jobs:
       - name: Display custom ref changes
         run: |
           echo "README changed in last 5 commits: ${{ steps.verify-custom.outputs.any_changed }}"
+
+  verify-dist-updated:
+    runs-on: ubuntu-latest
+    name: Verify dist files are updated
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full git history for comparisons
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Check if source files changed
+        id: check-src
+        uses: ./verify-changed-files/
+        with:
+          files: |
+            verify-changed-files/src/**
+            verify-changed-files/package.json
+            verify-changed-files/package-lock.json
+            verify-changed-files/tsconfig.json
+
+      - name: Check if dist files changed
+        id: check-dist
+        if: steps.check-src.outputs.any_changed == 'true'
+        uses: ./verify-changed-files/
+        with:
+          files: verify-changed-files/dist/**
+
+      - name: Fail if dist not updated
+        if: steps.check-src.outputs.any_changed == 'true' && steps.check-dist.outputs.any_changed == 'false'
+        run: |
+          echo "::error::Source files were changed but dist files were not updated. Please run 'npm run build' and commit the changes."
+          exit 1
+          
+      - name: Success message
+        if: steps.check-src.outputs.any_changed == 'true' && steps.check-dist.outputs.any_changed == 'true'
+        run: echo "✅ Source files were changed and dist files were properly updated"
