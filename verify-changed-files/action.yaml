@@ -3,8 +3,9 @@ description: 'GitHub Action to check if files have changed and output the result
 author: 'APIX Team'
 inputs:
   files:
-    description: 'Files or patterns to check for changes'
-    required: true
+    description: 'Files or patterns to check for changes (defaults to entire repository)'
+    required: false
+    default: '.'
   base-ref:
     description: 'Base git ref to compare changes against (default: previous commit)'
     required: false
