@@ -30,4 +30,4 @@ outputs:
     description: "key of the issue found"
 runs:
   using: "node20"
-  main: "dist/src/index.js"
+  main: "dist/index.js"
