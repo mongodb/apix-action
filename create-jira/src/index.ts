@@ -12,11 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-const core = require('@actions/core');
-const request = require('request');
-const lodash = require('lodash');
+import * as core from '@actions/core';
+import request, { Response } from 'request';
+import * as lodash from 'lodash';
 
-function main() {
+export interface JiraIssue {
+  fields: {
+    project: { key: string };
+    summary: string;
+    description?: string;
+    issuetype?: { name: string };
+    assignee?: { name: string };
+    labels?: string[];
+    components?: { name: string }[];
+    [key: string]: any;
+  };
+}
+
+export function main() {
   try {
     const token = core.getInput('token');
     const projectKey = core.getInput('project-key');
@@ -27,25 +40,26 @@ function main() {
     const components = core.getInput('components');
     const assignee = core.getInput('assignee');
     const extraData = core.getInput('extra-data');
-    const labelList = labels.split(",").filter(value => value != "")
-    const componentList = components.split(",").filter(value => value != "")
+    const apiBase = core.getInput('api-base');
+    const labelList = labels.split(",").filter(value => value != "");
+    const componentList = components.split(",").filter(value => value != "");
 
-    body = {"fields":{"project":{"key":projectKey},"summary":summary}};
+    let body: JiraIssue = { fields: { project: { key: projectKey }, summary: summary } };
     if (description != "") {
-      body["fields"]["description"] = description;
+      body.fields.description = description;
     }
     if (issuetype != "") {
-      body["fields"]["issuetype"] = {"name": issuetype};
+      body.fields.issuetype = { name: issuetype };
     }
     if (assignee != "") {
-      body["fields"]["assignee"] = {"name": assignee};
+      body.fields.assignee = { name: assignee };
     }
     if (labelList.length != 0) {
-      body["fields"]["labels"] = labelList;
+      body.fields.labels = labelList;
     }
     if (componentList.length != 0) {
-      body["fields"]["components"] = componentList.map(value => {
-        return {"name": value};
+      body.fields.components = componentList.map(value => {
+        return { name: value };
       });
     }
     if (extraData != "") {
@@ -54,12 +68,11 @@ function main() {
         if (lodash.isArray(dst)) {
           return dst.concat(src);
         }
-      })
+      });
     }
-    console.info("sending: " + JSON.stringify(body));
 
     request({
-      url: "https://jira.mongodb.org/rest/api/2/issue",
+      url: `${apiBase}/rest/api/2/issue`,
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -67,18 +80,21 @@ function main() {
       },
       body: body,
       json: true
-    }, (err, response, responseBody) => {
+    }, (err: any, response: Response, responseBody: any) => {
       if (err != null) {
         return core.setFailed(err);
       }
-      console.info("received: " + JSON.stringify(responseBody));
       if (response.statusCode >= 400) {
         return core.setFailed(response.statusCode + " " + response.statusMessage);
       }
       core.setOutput("issue-key", responseBody.key);
     });
   } catch (error) {
-    core.setFailed(error.message);
+    if (error instanceof Error) {
+      core.setFailed(error.message);
+    } else {
+      core.setFailed(String(error));
+    }
   }
 }
 
