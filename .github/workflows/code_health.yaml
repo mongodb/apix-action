@@ -6,7 +6,7 @@ on:
       - main
   pull_request:
 jobs:
-  build:
+  create-jira-build:
     runs-on: ubuntu-latest
     steps:
       - uses: GitHubSecurityLab/actions-permissions/monitor@v1
@@ -38,7 +38,7 @@ jobs:
             echo "Try running: make gen-docs"
             exit 1
           fi
-  test:
+  create-jira-unit-test:
     runs-on: ubuntu-latest
     steps:
       - uses: GitHubSecurityLab/actions-permissions/monitor@v1
