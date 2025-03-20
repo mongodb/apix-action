@@ -12,6 +12,9 @@ inputs:
     required: true
   description:
     description: "Description of the issue"
+  api-base:
+    description: "Base URL for the Jira API"
+    default: "https://jira.mongodb.org"
   issuetype:
     description: "Name of the issue type"
   assignee:
@@ -27,4 +30,4 @@ outputs:
     description: "key of the issue found"
 runs:
   using: "node20"
-  main: "index.js"
+  main: "dist/index.js"

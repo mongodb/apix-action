@@ -7,6 +7,9 @@ inputs:
   jql:
     description: "JQL query to run"
     required: true
+  api-base:
+    description: "Base URL for the Jira API"
+    default: "https://jira.mongodb.org"
 outputs:
   found:
     description: "returns 'true' if issue is found otherwise 'false'"
@@ -22,15 +25,14 @@ runs:
       env:
         JIRA_API_TOKEN: ${{ inputs.token }}
         QUERY: ${{ inputs.jql }}
+        JIRA_API_BASE: ${{ inputs.api-base }}
       run: |
         request=$(jq -n --arg query "$QUERY" '.jql = $query')
-        echo "REQUEST=${request}"
         json_response=$(curl --fail --request POST \
-          --url 'https://jira.mongodb.org/rest/api/2/search' \
+          --url "${JIRA_API_BASE}/rest/api/2/search" \
           --header 'Authorization: Bearer '"${JIRA_API_TOKEN}" \
           --header 'Accept: application/json' \
           --header 'Content-Type: application/json' \
           --data "$request")
-        echo "RESPONSE=${json_response}"
         echo "KEY=$(echo "${json_response}" | jq -c '.issues[] | .key' | head -n 1)" >> "$GITHUB_OUTPUT"
         echo "FOUND=$(echo "${json_response}" | jq -c '[.issues[]] | any')" >> "$GITHUB_OUTPUT"

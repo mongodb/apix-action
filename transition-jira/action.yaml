@@ -12,12 +12,16 @@ inputs:
     required: true
   resolution:
     description: "Resolution of Transition"
+  api-base:
+    description: "Base URL for the Jira API"
+    default: "https://jira.mongodb.org"
 runs:
   using: "composite"
   steps:
     - id: find
       shell: bash
       env:
+        JIRA_API_BASE: ${{ inputs.api-base }}
         JIRA_API_TOKEN: ${{ inputs.token }}
         ISSUE_KEY: ${{ inputs.issue-key }}
         TRANSITION_ID: ${{ inputs.transition-id }}
@@ -27,11 +31,9 @@ runs:
         if [[ -n "$RESOLUTION" ]]; then
           request=$(echo $request | jq --arg resolution "$RESOLUTION" '[.,{fields:{resolution:{name:$resolution}}}] | add')
         fi
-        echo "REQUEST=${request}"
         json_response=$(curl --fail --request POST \
-          --url "https://jira.mongodb.org/rest/api/2/issue/$ISSUE_KEY/transitions" \
+          --url "${JIRA_API_BASE}/rest/api/2/issue/$ISSUE_KEY/transitions" \
           --header 'Authorization: Bearer '"${JIRA_API_TOKEN}" \
           --header 'Accept: application/json' \
           --header 'Content-Type: application/json' \
           --data "$request")
-        echo "RESPONSE=${json_response}"
