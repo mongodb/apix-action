@@ -43,8 +43,8 @@ jobs:
         
       - name: Display all changed files
         run: |
-          echo "Any changed: ${{ steps.verify-all.outputs.any_changed }}"
-          echo "All changed: ${{ steps.verify-all.outputs.all_changed }}"
+          echo "Files changed: ${{ steps.verify-all.outputs.files_changed }}"
+          echo "All files changed: ${{ steps.verify-all.outputs.all_files_changed }}"
           echo "Changed files: ${{ steps.verify-all.outputs.changed_files }}"
 
       - name: Test Action (Specific Files)
@@ -58,8 +58,8 @@ jobs:
           
       - name: Display specific changed files
         run: |
-          echo "Any specific files changed: ${{ steps.verify-specific.outputs.any_changed }}"
-          echo "All specific files changed: ${{ steps.verify-specific.outputs.all_changed }}"
+          echo "Specific files changed: ${{ steps.verify-specific.outputs.files_changed }}"
+          echo "All specific files changed: ${{ steps.verify-specific.outputs.all_files_changed }}"
           echo "Changed specific files: ${{ steps.verify-specific.outputs.changed_files }}"
 
       - name: Test Action (Custom Refs)
@@ -72,7 +72,7 @@ jobs:
           
       - name: Display custom ref changes
         run: |
-          echo "README changed in last 5 commits: ${{ steps.verify-custom.outputs.any_changed }}"
+          echo "README changed in last 5 commits: ${{ steps.verify-custom.outputs.files_changed }}"
 
   verify-dist-updated:
     runs-on: ubuntu-latest
@@ -89,29 +89,18 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Check if source files changed
-        id: check-src
-        uses: ./verify-changed-files/
-        with:
-          files: |
-            verify-changed-files/src/**
-            verify-changed-files/package.json
-            verify-changed-files/package-lock.json
-            verify-changed-files/tsconfig.json
-
       - name: Check if dist files changed
         id: check-dist
-        if: steps.check-src.outputs.any_changed == 'true'
+        if: steps.check-src.outputs.files_changed == 'true'
         uses: ./verify-changed-files/
         with:
           files: verify-changed-files/dist/**
 
       - name: Fail if dist not updated
-        if: steps.check-src.outputs.any_changed == 'true' && steps.check-dist.outputs.any_changed == 'false'
+        if: steps.check-src.outputs.files_changed == 'true' && steps.check-dist.outputs.files_changed == 'false'
         run: |
           echo "::error::Source files were changed but dist files were not updated. Please run 'npm run build' and commit the changes."
           exit 1
-          
       - name: Success message
-        if: steps.check-src.outputs.any_changed == 'true' && steps.check-dist.outputs.any_changed == 'true'
+        if: steps.check-src.outputs.files_changed == 'true' && steps.check-dist.outputs.files_changed == 'true'
         run: echo "✅ Source files were changed and dist files were properly updated"

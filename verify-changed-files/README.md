@@ -16,8 +16,8 @@ A GitHub Action to check if specified files have changed between git refs and ou
 | Name | Description |
 |------|-------------|
 | `changed_files` | List of all changed files |
-| `any_changed` | Boolean indicating if any files have changed (true/false) |
-| `all_changed` | Boolean indicating if all specified files have changed (true/false) |
+| `files_changed` | Boolean indicating if any files have changed (true/false) |
+| `all_files_changed` | Boolean indicating if all specified files have changed (true/false) |
 
 ## Example Usage
 
@@ -47,7 +47,7 @@ jobs:
             package.json
             
       - name: Run if files changed
-        if: steps.verify_changed.outputs.any_changed == 'true'
+        if: steps.verify_changed.outputs.files_changed == 'true'
         run: |
           echo "The following files have changed: ${{ steps.verify_changed.outputs.changed_files }}"
           # Run your build, test or deploy commands here
@@ -61,7 +61,7 @@ jobs:
   # No files input means check entire repository
 
 - name: Run if any file changed
-  if: steps.verify_any_changes.outputs.any_changed == 'true'
+  if: steps.verify_any_changes.outputs.files_changed == 'true'
   run: echo "Something changed in the repository!"
 ```
 

@@ -62,8 +62,8 @@ describe('verify-changed-files action', () => {
     // Check outputs
     expect(mockSetOutput).toHaveBeenCalledWith('changed_files', expect.stringContaining('src/index.ts'));
     expect(mockSetOutput).toHaveBeenCalledWith('changed_files', expect.stringContaining('package.json'));
-    expect(mockSetOutput).toHaveBeenCalledWith('any_changed', 'true');
-    expect(mockSetOutput).toHaveBeenCalledWith('all_changed', 'true');
+    expect(mockSetOutput).toHaveBeenCalledWith('files_changed', 'true');
+    expect(mockSetOutput).toHaveBeenCalledWith('all_files_changed', 'true');
     
     // Check logs
     expect(mockInfo).toHaveBeenCalled();
@@ -105,8 +105,8 @@ describe('verify-changed-files action', () => {
     
     // Check outputs for no changes
     expect(mockSetOutput).toHaveBeenCalledWith('changed_files', '');
-    expect(mockSetOutput).toHaveBeenCalledWith('any_changed', 'false');
-    expect(mockSetOutput).toHaveBeenCalledWith('all_changed', 'false');
+    expect(mockSetOutput).toHaveBeenCalledWith('files_changed', 'false');
+    expect(mockSetOutput).toHaveBeenCalledWith('all_files_changed', 'false');
   });
 
   test('uses default value when files input is not provided', async () => {
@@ -146,7 +146,7 @@ describe('verify-changed-files action', () => {
     
     // Check outputs for default behavior
     expect(mockSetOutput).toHaveBeenCalledWith('changed_files', expect.stringContaining('README.md'));
-    expect(mockSetOutput).toHaveBeenCalledWith('any_changed', 'true');
+    expect(mockSetOutput).toHaveBeenCalledWith('files_changed', 'true');
   });
 
   test('handles errors gracefully', async () => {

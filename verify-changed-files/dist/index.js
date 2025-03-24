@@ -25682,12 +25682,14 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.run = run;
 const core = __importStar(__nccwpck_require__(7484));
 const exec_1 = __nccwpck_require__(5236);
+// Export the run function for testing
 async function run() {
     try {
         // Get inputs
-        const files = core.getInput('files', { required: true });
+        const files = core.getInput('files') || '.'; // Default to entire repo if not specified
         const baseRef = core.getInput('base-ref') || 'HEAD^';
         const headRef = core.getInput('head-ref') || 'HEAD';
         const separator = core.getInput('separator') || ' ';
@@ -25731,16 +25733,16 @@ async function run() {
         }
         // Prepare outputs
         const matchedFilesArray = Array.from(matchedFiles);
-        const anyChanged = matchedFilesArray.length > 0;
-        const allChanged = filePatterns.length > 0 && matchedFilesArray.length >= filePatterns.length;
+        const filesChanged = matchedFilesArray.length > 0;
+        const allFilesChanged = filePatterns.length > 0 && matchedFilesArray.length >= filePatterns.length;
         // Set outputs
         core.setOutput('changed_files', matchedFilesArray.join(separator));
-        core.setOutput('any_changed', anyChanged.toString());
-        core.setOutput('all_changed', allChanged.toString());
+        core.setOutput('files_changed', filesChanged.toString());
+        core.setOutput('all_files_changed', allFilesChanged.toString());
         // Log results
         core.info(`Changed files: ${matchedFilesArray.join(', ') || 'none'}`);
-        core.info(`Any files changed: ${anyChanged}`);
-        core.info(`All files changed: ${allChanged}`);
+        core.info(`Files changed: ${filesChanged}`);
+        core.info(`All files changed: ${allFilesChanged}`);
     }
     catch (error) {
         if (error instanceof Error) {
@@ -25751,7 +25753,10 @@ async function run() {
         }
     }
 }
-run();
+// Only call run() if executed directly
+if (require.main === require.cache[eval('__filename')]) {
+    run();
+}
 
 
 /***/ }),

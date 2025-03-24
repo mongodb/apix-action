@@ -21,9 +21,9 @@ inputs:
 outputs:
   changed_files:
     description: 'List of all changed files'
-  any_changed:
+  files_changed:
     description: 'Boolean indicating if any files have changed (true/false)'
-  all_changed:
+  all_files_changed:
     description: 'Boolean indicating if all specified files have changed (true/false)'
 runs:
   using: 'node20'

@@ -56,18 +56,18 @@ export async function run(): Promise<void> {
     
     // Prepare outputs
     const matchedFilesArray = Array.from(matchedFiles);
-    const anyChanged = matchedFilesArray.length > 0;
-    const allChanged = filePatterns.length > 0 && matchedFilesArray.length >= filePatterns.length;
+    const filesChanged = matchedFilesArray.length > 0;
+    const allFilesChanged = filePatterns.length > 0 && matchedFilesArray.length >= filePatterns.length;
     
     // Set outputs
     core.setOutput('changed_files', matchedFilesArray.join(separator));
-    core.setOutput('any_changed', anyChanged.toString());
-    core.setOutput('all_changed', allChanged.toString());
+    core.setOutput('files_changed', filesChanged.toString());
+    core.setOutput('all_files_changed', allFilesChanged.toString());
     
     // Log results
     core.info(`Changed files: ${matchedFilesArray.join(', ') || 'none'}`);
-    core.info(`Any files changed: ${anyChanged}`);
-    core.info(`All files changed: ${allChanged}`);
+    core.info(`Files changed: ${filesChanged}`);
+    core.info(`All files changed: ${allFilesChanged}`);
     
   } catch (error) {
     if (error instanceof Error) {
