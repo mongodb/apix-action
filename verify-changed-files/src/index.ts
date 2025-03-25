@@ -6,10 +6,23 @@ export async function run(): Promise<void> {
   try {
     // Get inputs
     const files = core.getInput('files') || '.'; // Default to entire repo if not specified
-    const baseRef = core.getInput('base-ref') || 'HEAD^';
+    let baseRef = core.getInput('base-ref');
     const headRef = core.getInput('head-ref') || 'HEAD';
     const separator = core.getInput('separator') || ' ';
     
+    // Determine base ref dynamically if not provided
+    if (!baseRef) {
+      const isPullRequest = process.env.GITHUB_EVENT_NAME === 'pull_request';
+      if (isPullRequest) {
+        const baseBranch = process.env.GITHUB_BASE_REF;
+        if (!baseBranch) {
+          throw new Error('GITHUB_BASE_REF is not set for the pull request.');
+        }
+        baseRef = `origin/${baseBranch}`;
+      } else {
+        baseRef = 'HEAD^';
+      }
+    }
     // Parse files to check
     const filePatterns = files.split('\n').filter(pattern => pattern.trim() !== '');
     
