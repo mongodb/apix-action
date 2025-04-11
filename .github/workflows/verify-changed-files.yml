@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  test-action:
+  verify-changed-files-test:
     runs-on: ubuntu-latest
     name: Test Verify Changed Files Action
     steps:
@@ -74,7 +74,7 @@ jobs:
         run: |
           echo "README changed in last 5 commits: ${{ steps.verify-custom.outputs.files_changed }}"
 
-  verify-dist-updated:
+  verify-changed-files-build:
     runs-on: ubuntu-latest
     name: Verify dist files are updated
     if: github.event_name == 'pull_request'
