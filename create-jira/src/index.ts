@@ -13,8 +13,8 @@
 // limitations under the License.
 
 import * as core from '@actions/core';
-import request, { Response } from 'request';
-import * as lodash from 'lodash';
+import request from 'request';
+import { merge, mergeWith, isArray } from 'lodash';
 
 export interface JiraIssue {
   fields: {
@@ -64,8 +64,8 @@ export function main() {
     }
     if (extraData != "") {
       const extraDataObject = JSON.parse(extraData);
-      lodash.mergeWith(body, extraDataObject, (dst, src) => {
-        if (lodash.isArray(dst)) {
+      mergeWith(body, extraDataObject, (dst, src) => {
+        if (isArray(dst)) {
           return dst.concat(src);
         }
       });
@@ -80,7 +80,7 @@ export function main() {
       },
       body: body,
       json: true
-    }, (err: any, response: Response, responseBody: any) => {
+    }, (err: any, response: request.Response, responseBody: any) => {
       if (err != null) {
         return core.setFailed(err);
       }

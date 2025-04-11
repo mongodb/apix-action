@@ -1,34 +1,32 @@
-'use strict';
-
-var require$$0$2 = require('os');
-var require$$0$3 = require('crypto');
-var require$$1$1 = require('fs');
-var require$$1$7 = require('path');
-var require$$2$1 = require('http');
-var require$$4$2 = require('https');
-var require$$0$6 = require('net');
-var require$$1$3 = require('tls');
-var require$$4$1 = require('events');
-var require$$0$5 = require('assert');
-var require$$1$2 = require('util');
-var require$$0$7 = require('stream');
-var require$$0$4 = require('buffer');
-var require$$1$4 = require('querystring');
-var require$$14$1 = require('stream/web');
-var require$$0$9 = require('node:stream');
-var require$$1$5 = require('node:util');
-var require$$0$8 = require('node:events');
-var require$$0$a = require('worker_threads');
-var require$$2$2 = require('perf_hooks');
-var require$$5$1 = require('util/types');
-var require$$4$3 = require('async_hooks');
-var require$$1$6 = require('console');
-var require$$0$b = require('url');
-var require$$3$2 = require('zlib');
-var require$$6$1 = require('string_decoder');
-var require$$0$c = require('diagnostics_channel');
-var require$$2$3 = require('child_process');
-var require$$6$2 = require('timers');
+import require$$0$2 from 'os';
+import require$$0$3 from 'crypto';
+import require$$1$1 from 'fs';
+import require$$1$7 from 'path';
+import require$$2$1 from 'http';
+import require$$4$2 from 'https';
+import require$$0$6 from 'net';
+import require$$1$3 from 'tls';
+import require$$4$1 from 'events';
+import require$$0$5 from 'assert';
+import require$$1$2 from 'util';
+import require$$0$7 from 'stream';
+import require$$0$4 from 'buffer';
+import require$$1$4 from 'querystring';
+import require$$14$1 from 'stream/web';
+import require$$0$9 from 'node:stream';
+import require$$1$5 from 'node:util';
+import require$$0$8 from 'node:events';
+import require$$0$a from 'worker_threads';
+import require$$2$2 from 'perf_hooks';
+import require$$5$1 from 'util/types';
+import require$$4$3 from 'async_hooks';
+import require$$1$6 from 'console';
+import require$$0$b from 'url';
+import require$$3$2 from 'zlib';
+import require$$6$1 from 'string_decoder';
+import require$$0$c from 'diagnostics_channel';
+import require$$2$3 from 'child_process';
+import require$$6$2 from 'timers';
 
 var commonjsGlobal = typeof globalThis !== 'undefined' ? globalThis : typeof window !== 'undefined' ? window : typeof global !== 'undefined' ? global : typeof self !== 'undefined' ? self : {};
 
@@ -88333,5 +88331,5 @@ function main() {
 }
 main();
 
-exports.main = main;
+export { main };
 //# sourceMappingURL=index.js.map
