@@ -74,7 +74,7 @@ jobs:
               server {
                   listen 80;
 
-                  location = /rest/api/2/issue {
+                  location /rest/api/2/issue {
                       if ($request_method = POST) {
                           default_type application/json;
                           return 200 '{"key": "MOCK-123", "id": "10001", "self": "http://localhost:8080/rest/api/2/issue/10001"}';
