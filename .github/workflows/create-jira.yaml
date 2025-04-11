@@ -95,12 +95,12 @@ jobs:
         run: |
           docker run -d --name mock-nginx \
             -v ${{ github.workspace }}/nginx.conf:/etc/nginx/nginx.conf:ro \
-            -p 8080:80 nginx:alpine
+            -p 55000:80 nginx:alpine
 
       - name: Wait for Nginx to be ready (via /ping)
         run: |
           for i in {1..50}; do
-            if curl -s http://localhost:8080/ping > /dev/null; then
+            if curl -s http://localhost:55000/ping > /dev/null; then
               echo "✅ Nginx is ready!"
               break
             fi
@@ -114,7 +114,7 @@ jobs:
           project-key: PROJECT
           summary: My Jira Issue
           description: My Jira Issue Description
-          api-base: http://localhost:8080
+          api-base: http://localhost:55000
           issuetype: TEST
           assignee: USER
           labels: LABEL1,LABEL2
