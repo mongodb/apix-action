@@ -1,4 +1,4 @@
-name: Test Verify Changed Files Action
+name: Verify Changed Files
 
 on:
   push:
