@@ -7,9 +7,17 @@
     "build": "rollup --config rollup.config.ts --configPlugin @rollup/plugin-typescript",
     "test": "jest"
   },
-  "keywords": [],
-  "author": "MongoDB Inc.",
-  "description": "",
+  "keywords": [
+    "github",
+    "action",
+    "jira",
+    "issue",
+    "create",
+    "mongodb"
+  ],
+  "license": "Apache-2.0",
+  "author": "MongoDB <info@mongodb.com>",
+  "description": "Github Action to create a Jira issue",
   "type": "module",
   "dependencies": {
     "@actions/core": "^1.10.1",
