@@ -1,0 +1,106 @@
+name: Verify Changed Files
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ '**' ]
+  workflow_dispatch:
+
+jobs:
+  verify-changed-files-test:
+    runs-on: ubuntu-latest
+    name: Test Verify Changed Files Action
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full git history for comparisons
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: verify-changed-files/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: ./verify-changed-files
+
+      - name: Build Action
+        run: npm run build
+        working-directory: ./verify-changed-files
+
+      - name: Run tests
+        run: npm test
+        working-directory: ./verify-changed-files
+
+      - name: Test Action (All Files)
+        id: verify-all
+        uses: ./verify-changed-files/
+        # No files input - should check entire repository
+        
+      - name: Display all changed files
+        run: |
+          echo "Files changed: ${{ steps.verify-all.outputs.files_changed }}"
+          echo "All files changed: ${{ steps.verify-all.outputs.all_files_changed }}"
+          echo "Changed files: ${{ steps.verify-all.outputs.changed_files }}"
+
+      - name: Test Action (Specific Files)
+        id: verify-specific
+        uses: ./verify-changed-files/
+        with:
+          files: |
+            verify-changed-files/src/**/*.ts
+            verify-changed-files/package.json
+            .github/workflows/test-action.yml
+          
+      - name: Display specific changed files
+        run: |
+          echo "Specific files changed: ${{ steps.verify-specific.outputs.files_changed }}"
+          echo "All specific files changed: ${{ steps.verify-specific.outputs.all_files_changed }}"
+          echo "Changed specific files: ${{ steps.verify-specific.outputs.changed_files }}"
+
+      - name: Test Action (Custom Refs)
+        id: verify-custom
+        uses: ./verify-changed-files/
+        with:
+          base-ref: 'HEAD~5'
+          head-ref: 'HEAD'
+          files: 'README.md'
+          
+      - name: Display custom ref changes
+        run: |
+          echo "README changed in last 5 commits: ${{ steps.verify-custom.outputs.files_changed }}"
+
+  verify-changed-files-build:
+    runs-on: ubuntu-latest
+    name: Verify dist files are updated
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full git history for comparisons
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Check if dist files changed
+        id: check-dist
+        if: steps.check-src.outputs.files_changed == 'true'
+        uses: ./verify-changed-files/
+        with:
+          files: verify-changed-files/dist/**
+
+      - name: Fail if dist not updated
+        if: steps.check-src.outputs.files_changed == 'true' && steps.check-dist.outputs.files_changed == 'false'
+        run: |
+          echo "::error::Source files were changed but dist files were not updated. Please run 'npm run build' and commit the changes."
+          exit 1
+      - name: Success message
+        if: steps.check-src.outputs.files_changed == 'true' && steps.check-dist.outputs.files_changed == 'true'
+        run: echo "✅ Source files were changed and dist files were properly updated"
