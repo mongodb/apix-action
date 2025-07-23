@@ -63,12 +63,16 @@ export function main() {
       });
     }
     if (extraData != "") {
-      const extraDataObject = JSON.parse(extraData);
-      mergeWith(body, extraDataObject, (dst, src) => {
-        if (isArray(dst)) {
-          return dst.concat(src);
-        }
-      });
+      try {
+        const extraDataObject = JSON.parse(extraData);
+        mergeWith(body, extraDataObject, (dst, src) => {
+          if (isArray(dst)) {
+            return dst.concat(src);
+          }
+        });
+      } catch (error) {
+        throw new Error("Error parsing extra-data: " + error);
+      }
     }
 
     request({
@@ -82,10 +86,12 @@ export function main() {
       json: true
     }, (err: any, response: request.Response, responseBody: any) => {
       if (err != null) {
-        return core.setFailed(err);
+        core.setFailed(err);
+        return;
       }
       if (response.statusCode >= 400) {
-        return core.setFailed(response.statusCode + " " + response.statusMessage);
+        core.setFailed(response.statusCode + " " + response.statusMessage + "\n" + JSON.stringify(responseBody));
+        return;
       }
       core.setOutput("issue-key", responseBody.key);
     });

@@ -152,7 +152,9 @@ describe('Create Jira Issue Action', () => {
       statusMessage: 'Bad Request',
     };
 
-    const responseBody = {};
+    const responseBody = {
+      detail: "Bad Request"
+    };
 
     (request as unknown as jest.Mock).mockImplementation((options, callback) => {
       callback(null, responseMock, responseBody);
@@ -160,6 +162,83 @@ describe('Create Jira Issue Action', () => {
 
     main();
 
-    expect(setFailedMock).toHaveBeenCalledWith("400 Bad Request");
+    expect(setFailedMock).toHaveBeenCalledWith("400 Bad Request\n{\"detail\":\"Bad Request\"}");
+  });
+  it('should fail if request returns an error', () => {
+    const setFailedMock = jest.spyOn(core, 'setFailed');
+    const getInputMock = jest.spyOn(core, 'getInput');
+
+    getInputMock.mockImplementation((name: string) => {
+      switch (name) {
+      case 'token':
+        return 'fake-token';
+      case 'project-key':
+        return 'TEST';
+      case 'summary':
+        return 'Test issue';
+      case 'description':
+        return 'Test description';
+      case 'issuetype':
+        return 'Task';
+      case 'labels':
+        return 'bug,urgent';
+      case 'components':
+        return 'backend,frontend';
+      case 'assignee':
+        return 'test-user';
+      case 'extra-data':
+        return '{"customfield_10011": "custom-value"}';
+      case 'api-base':
+        return 'https://jira.example.com';
+      default:
+        return '';
+      }
+    });
+
+    const err = new Error('Request failed');
+
+    (request as unknown as jest.Mock).mockImplementation((options, callback) => {
+      callback(err);
+    });
+
+    main();
+
+    expect(setFailedMock).toHaveBeenCalledWith(err);
+  });
+
+  it('should fail if json is invalid', () => {
+    const setFailedMock = jest.spyOn(core, 'setFailed');
+    const getInputMock = jest.spyOn(core, 'getInput');
+
+    getInputMock.mockImplementation((name: string) => {
+      switch (name) {
+        case 'token':
+          return 'fake-token';
+        case 'project-key':
+          return 'TEST';
+        case 'summary':
+          return 'Test issue';
+        case 'description':
+          return 'Test description';
+        case 'issuetype':
+          return 'Task';
+        case 'labels':
+          return 'bug,urgent';
+        case 'components':
+          return 'backend,frontend';
+        case 'assignee':
+          return 'test-user';
+        case 'extra-data':
+          return '{invalid-json';
+        case 'api-base':
+          return 'https://jira.example.com';
+        default:
+          return '';
+      }
+    });
+
+    main();
+
+    expect(setFailedMock).toHaveBeenCalledWith("Error parsing extra-data: SyntaxError: Expected property name or '}' in JSON at position 1 (line 1 column 2)");
   });
 });
