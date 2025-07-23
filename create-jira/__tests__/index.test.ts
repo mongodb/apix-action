@@ -10,7 +10,7 @@ describe('Create Jira Issue Action', () => {
     jest.clearAllMocks();
   });
 
-  it('should create a Jira issue successfully', () => {
+  it('should create a Jira issue successfully', async () => {
     const setOutputMock = jest.spyOn(core, 'setOutput');
     const setFailedMock = jest.spyOn(core, 'setFailed');
     const getInputMock = jest.spyOn(core, 'getInput');
@@ -56,7 +56,7 @@ describe('Create Jira Issue Action', () => {
       callback(null, responseMock, responseMock.body);
     });
 
-    main();
+    await main();
 
     expect(requestBody).toEqual({
       fields: {
@@ -70,11 +70,11 @@ describe('Create Jira Issue Action', () => {
       },
       customfield_10011: 'custom-value'
     } as JiraIssue)
-    expect(setOutputMock).toHaveBeenCalledWith('issue-key', 'TEST-123');
     expect(setFailedMock).not.toHaveBeenCalled();
+    expect(setOutputMock).toHaveBeenCalledWith('issue-key', 'TEST-123');
   });
 
-  it('should fail if request returns an error', () => {
+  it('should fail if request returns an error', async () => {
     const setFailedMock = jest.spyOn(core, 'setFailed');
     const getInputMock = jest.spyOn(core, 'getInput');
 
@@ -111,12 +111,12 @@ describe('Create Jira Issue Action', () => {
       callback(err, null, null);
     });
 
-    main();
+    await main();
 
     expect(setFailedMock).toHaveBeenCalledWith(err);
   });
 
-  it('should fail if response status code is >= 400', () => {
+  it('should fail if response status code is >= 400', async () => {
     const setFailedMock = jest.spyOn(core, 'setFailed');
     const getInputMock = jest.spyOn(core, 'getInput');
 
@@ -152,14 +152,55 @@ describe('Create Jira Issue Action', () => {
       statusMessage: 'Bad Request',
     };
 
-    const responseBody = {};
+    const responseBody = {
+      detail: "Bad Request"
+    };
 
     (request as unknown as jest.Mock).mockImplementation((options, callback) => {
       callback(null, responseMock, responseBody);
     });
 
-    main();
+    await main();
 
-    expect(setFailedMock).toHaveBeenCalledWith("400 Bad Request");
+    const err = new Error("400 Bad Request\n{\"detail\":\"Bad Request\"}");
+
+    expect(setFailedMock).toHaveBeenCalledWith(err);
+  });
+  it('should fail if json is invalid', async () => {
+    const setFailedMock = jest.spyOn(core, 'setFailed');
+    const getInputMock = jest.spyOn(core, 'getInput');
+
+    getInputMock.mockImplementation((name: string) => {
+      switch (name) {
+        case 'token':
+          return 'fake-token';
+        case 'project-key':
+          return 'TEST';
+        case 'summary':
+          return 'Test issue';
+        case 'description':
+          return 'Test description';
+        case 'issuetype':
+          return 'Task';
+        case 'labels':
+          return 'bug,urgent';
+        case 'components':
+          return 'backend,frontend';
+        case 'assignee':
+          return 'test-user';
+        case 'extra-data':
+          return '{invalid-json';
+        case 'api-base':
+          return 'https://jira.example.com';
+        default:
+          return '';
+      }
+    });
+
+    await main();
+
+    const err = new Error("Error parsing extra-data: SyntaxError: Expected property name or '}' in JSON at position 1 (line 1 column 2)");
+
+    expect(setFailedMock).toHaveBeenCalledWith(err);
   });
 });

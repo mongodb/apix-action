@@ -88261,7 +88261,60 @@ var lodashExports = lodash.exports;
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-function main() {
+function buildRequestBody(projectKey, summary, description, issuetype, labels, components, assignee, extraData) {
+    const body = { fields: { project: { key: projectKey }, summary: summary } };
+    if (description != "") {
+        body.fields.description = description;
+    }
+    if (issuetype != "") {
+        body.fields.issuetype = { name: issuetype };
+    }
+    if (assignee != "") {
+        body.fields.assignee = { name: assignee };
+    }
+    if (labels.length != 0) {
+        body.fields.labels = labels;
+    }
+    if (components.length != 0) {
+        body.fields.components = components.map(value => {
+            return { name: value };
+        });
+    }
+    lodashExports.mergeWith(body, extraData, (dst, src) => {
+        if (lodashExports.isArray(dst)) {
+            return dst.concat(src);
+        }
+    });
+    return body;
+}
+async function createJiraIssue(token, apiBase, projectKey, summary, description, issuetype, labels, components, assignee, extraData) {
+    const body = buildRequestBody(projectKey, summary, description, issuetype, labels, components, assignee, extraData);
+    return await new Promise((resolve, reject) => {
+        request$1({
+            url: `${apiBase}/rest/api/2/issue`,
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: "Bearer " + token,
+            },
+            body: body,
+            json: true
+        }, (err, response, responseBody) => {
+            if (err != null) {
+                reject(err);
+                return;
+            }
+            if (response.statusCode >= 400) {
+                reject(new Error(response.statusCode + " " + response.statusMessage + "\n" + JSON.stringify(responseBody)));
+                return;
+            }
+            resolve({
+                response, responseBody
+            });
+        });
+    });
+}
+async function main() {
     try {
         const token = coreExports.getInput('token');
         const projectKey = coreExports.getInput('project-key');
@@ -88275,57 +88328,27 @@ function main() {
         const apiBase = coreExports.getInput('api-base');
         const labelList = labels.split(",").filter(value => value != "");
         const componentList = components.split(",").filter(value => value != "");
-        let body = { fields: { project: { key: projectKey }, summary: summary } };
-        if (description != "") {
-            body.fields.description = description;
-        }
-        if (issuetype != "") {
-            body.fields.issuetype = { name: issuetype };
-        }
-        if (assignee != "") {
-            body.fields.assignee = { name: assignee };
-        }
-        if (labelList.length != 0) {
-            body.fields.labels = labelList;
-        }
-        if (componentList.length != 0) {
-            body.fields.components = componentList.map(value => {
-                return { name: value };
-            });
-        }
+        let extraDataObject = undefined;
         if (extraData != "") {
-            const extraDataObject = JSON.parse(extraData);
-            lodashExports.mergeWith(body, extraDataObject, (dst, src) => {
-                if (lodashExports.isArray(dst)) {
-                    return dst.concat(src);
-                }
-            });
+            try {
+                extraDataObject = JSON.parse(extraData);
+            }
+            catch (error) {
+                throw new Error("Error parsing extra-data: " + error);
+            }
         }
-        request$1({
-            url: `${apiBase}/rest/api/2/issue`,
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: "Bearer " + token,
-            },
-            body: body,
-            json: true
-        }, (err, response, responseBody) => {
-            if (err != null) {
-                return coreExports.setFailed(err);
-            }
-            if (response.statusCode >= 400) {
-                return coreExports.setFailed(response.statusCode + " " + response.statusMessage);
-            }
-            coreExports.setOutput("issue-key", responseBody.key);
-        });
+        const { responseBody } = await createJiraIssue(token, apiBase, projectKey, summary, description, issuetype, labelList, componentList, assignee, extraDataObject);
+        if (!responseBody.key) {
+            throw new Error("No issue key found in response: " + JSON.stringify(responseBody));
+        }
+        coreExports.setOutput("issue-key", responseBody.key);
     }
     catch (error) {
         if (error instanceof Error) {
-            coreExports.setFailed(error.message);
+            coreExports.setFailed(error);
         }
         else {
-            coreExports.setFailed(String(error));
+            coreExports.setFailed(JSON.stringify(error));
         }
     }
 }
