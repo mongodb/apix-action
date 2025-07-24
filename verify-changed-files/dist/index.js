@@ -25770,7 +25770,9 @@ async function run() {
 }
 // Only call run() if executed directly
 if (require.main === require.cache[eval('__filename')]) {
-    run();
+    run().finally(() => {
+        process.exit();
+    });
 }
 
 
