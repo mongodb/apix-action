@@ -29,8 +29,10 @@ jobs:
         node-version-file: 'create-jira/package.json'
     - run: |
         cd verify-changed-files
+        npm ci
         npm run build
         cd ../create-jira
+        npm ci
         npm run build
     - name: Commit dist
       run: |
