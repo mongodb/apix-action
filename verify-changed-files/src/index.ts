@@ -93,5 +93,7 @@ export async function run(): Promise<void> {
 
 // Only call run() if executed directly
 if (require.main === module) {
-  run();
+  run().finally(() => {
+    process.exit();
+  });
 }

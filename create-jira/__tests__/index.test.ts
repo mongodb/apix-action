@@ -1,6 +1,6 @@
 import * as core from '@actions/core';
 import * as request from 'request';
-import { main, JiraIssue } from '../src/index';
+import { main, JiraIssue } from '../src/lib';
 
 jest.mock('@actions/core');
 jest.mock('request');
