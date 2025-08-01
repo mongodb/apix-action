@@ -71640,9 +71640,6 @@ async function main() {
                     reject(err);
                     return;
                 }
-                coreExports.warning(`url: ${apiBase}/rest/api/2/issue/${issueKey}/comment`);
-                coreExports.warning(`requestBody: ${JSON.stringify(requestBody, null, 2)}`);
-                coreExports.warning(`responseBody: ${JSON.stringify(responseBody, null, 2)}`);
                 if (response.statusCode >= 400) {
                     reject(new Error(response.statusCode + " " + response.statusMessage + "\n" + JSON.stringify(responseBody)));
                     return;
