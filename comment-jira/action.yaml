@@ -25,7 +25,6 @@ runs:
         COMMENT: ${{ inputs.comment }}
       run: |
         request=$(jq -n --arg comment "$COMMENT" '{"body":$comment}')
-        echo "Request: $request"
         json_response=$(curl --fail --request POST \
           --url "${JIRA_API_BASE}/rest/api/2/issue/$ISSUE_KEY/comment" \
           --header 'Authorization: Bearer '"${JIRA_API_TOKEN}" \
