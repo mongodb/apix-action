@@ -60,5 +60,7 @@ jobs:
         with:
           token: test
           issue-key: TEST-123
-          comment: "Test comment from GitHub Actions"
+          comment: |
+            Test comment from GitHub Actions
+            with multiple lines
           api-base: http://localhost:55000 
