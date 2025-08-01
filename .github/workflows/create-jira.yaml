@@ -112,7 +112,9 @@ jobs:
           token: test
           project-key: PROJECT
           summary: My Jira Issue
-          description: My Jira Issue Description
+          description: |
+            My Jira Issue Description
+            with multiple lines
           api-base: http://localhost:55000
           issuetype: TEST
           assignee: USER

@@ -1,0 +1,66 @@
+---
+name: Comment Jira
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+jobs:
+  comment-jira-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: GitHubSecurityLab/actions-permissions/monitor@v1
+        with:
+          config: ${{ vars.PERMISSIONS_CONFIG }}
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Write inline Nginx config
+        run: |
+          cat <<EOF > nginx.conf
+          events {}
+
+          http {
+              server {
+                  listen 80;
+
+                  location /rest/api/2/issue/TEST-123/comment {
+                      default_type application/json;
+                      return 201 '{"id": "10000"}';
+                  }
+
+                  location /ping {
+                      default_type plain/text;
+                      return 200 'PONG';
+                  }
+              }
+          }
+          EOF
+
+      - name: Start Nginx with Docker
+        run: |
+          docker run -d --name mock-nginx \
+            -v ${{ github.workspace }}/nginx.conf:/etc/nginx/nginx.conf:ro \
+            -p 55000:80 nginx:alpine
+
+      - name: Wait for Nginx to be ready (via /ping)
+        run: |
+          for i in {1..50}; do
+            if curl -s http://localhost:55000/ping > /dev/null; then
+              echo "✅ Nginx is ready!"
+              exit 0
+            fi
+            echo "Waiting for Nginx..."
+            docker logs mock-nginx
+            sleep 1
+          done
+          echo "Nginx is not reacheable"
+          exit 1
+
+      - uses: ./comment-jira/
+        with:
+          token: test
+          issue-key: TEST-123
+          comment: |
+            Test comment from GitHub Actions
+            with multiple lines
+          api-base: http://localhost:55000 
