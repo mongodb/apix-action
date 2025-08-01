@@ -20,19 +20,27 @@ outputs:
 runs:
   using: "composite"
   steps:
+    - id: request
+      shell: bash
+      run: |
+        {
+          echo "REQUEST_BODY<<EOF"
+          jq -n --arg query "$QUERY" '.jql = $query'
+          echo "EOF"
+        } >> "$GITHUB_OUTPUT"
     - id: find
       shell: bash
       env:
         JIRA_API_TOKEN: ${{ inputs.token }}
         QUERY: ${{ inputs.jql }}
         JIRA_API_BASE: ${{ inputs.api-base }}
+        REQUEST_BODY: ${{ steps.request.outputs.REQUEST_BODY }}
       run: |
-        request=$(jq -n --arg query "$QUERY" '.jql = $query')
         json_response=$(curl --fail --request POST \
           --url "${JIRA_API_BASE}/rest/api/2/search" \
           --header 'Authorization: Bearer '"${JIRA_API_TOKEN}" \
           --header 'Accept: application/json' \
           --header 'Content-Type: application/json' \
-          --data "$request")
-        echo "KEY=$(echo "${json_response}" | jq -c '.issues[] | .key' | head -n 1)" >> "$GITHUB_OUTPUT"
-        echo "FOUND=$(echo "${json_response}" | jq -c '[.issues[]] | any')" >> "$GITHUB_OUTPUT"
+          --data "$REQUEST_BODY")
+        echo "KEY=$(echo "${json_response}" | jq -r -c '.issues[] | .key' | head -n 1)" >> "$GITHUB_OUTPUT"
+        echo "FOUND=$(echo "${json_response}" | jq -r -c '[.issues[]] | any')" >> "$GITHUB_OUTPUT"

@@ -40,13 +40,15 @@ runs:
     - name: Get GitHub App User ID
       id: app-user
       shell: bash
+      env:
+        GH_TOKEN: ${{ steps.app-token.outputs.token }}
       run: |
         USER_NAME="${{ steps.app-token.outputs.app-slug }}[bot]"
         USER_ID="$(gh api "/users/$USER_NAME" --jq .id)"
         USER_EMAIL="${USER_ID}+${USER_NAME}@users.noreply.github.com"
-        echo "user-id=$USER_ID" >> "$GITHUB_OUTPUT"
-        echo "user-name=$USER_NAME" >> "$GITHUB_OUTPUT"
-        echo "user-email=$USER_EMAIL" >> "$GITHUB_OUTPUT"
-        echo "committer=$USER_NAME <$USER_EMAIL>" >> "$GITHUB_OUTPUT"
-      env:
-        GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        {
+          echo "user-id=$USER_ID"
+          echo "user-name=$USER_NAME"
+          echo "user-email=$USER_EMAIL"
+          echo "committer=$USER_NAME <$USER_EMAIL>"
+        } >> "$GITHUB_OUTPUT"
