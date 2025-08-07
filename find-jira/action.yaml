@@ -22,6 +22,8 @@ runs:
   steps:
     - id: request
       shell: bash
+      env:
+        QUERY: ${{ inputs.jql }}
       run: |
         {
           echo "REQUEST_BODY<<EOF"
@@ -32,7 +34,6 @@ runs:
       shell: bash
       env:
         JIRA_API_TOKEN: ${{ inputs.token }}
-        QUERY: ${{ inputs.jql }}
         JIRA_API_BASE: ${{ inputs.api-base }}
         REQUEST_BODY: ${{ steps.request.outputs.REQUEST_BODY }}
       run: |
