@@ -77,7 +77,6 @@ jobs:
   verify-changed-files-build:
     runs-on: ubuntu-latest
     name: Verify dist files are updated
-    if: github.event_name == 'pull_request'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
