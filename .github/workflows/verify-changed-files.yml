@@ -13,7 +13,7 @@ jobs:
     name: Test Verify Changed Files Action
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0  # Full git history for comparisons
 
@@ -79,7 +79,7 @@ jobs:
     name: Verify dist files are updated
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0  # Full git history for comparisons
 
