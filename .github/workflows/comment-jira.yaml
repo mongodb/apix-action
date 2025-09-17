@@ -14,7 +14,7 @@ jobs:
           config: ${{ vars.PERMISSIONS_CONFIG }}
       - name: Checkout repository
         uses: actions/checkout@v5
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
             node-version-file: comment-jira/package.json
       - name: install dependencies
@@ -46,7 +46,7 @@ jobs:
           config: ${{ vars.PERMISSIONS_CONFIG }}
       - name: Checkout repository
         uses: actions/checkout@v5
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
             node-version-file: comment-jira/package.json
       - name: install dependencies
