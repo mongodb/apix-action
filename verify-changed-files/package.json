@@ -22,7 +22,7 @@
   "author": "MongoDB <info@mongodb.com>",
   "license": "Apache-2.0",
   "dependencies": {
-    "@actions/core": "^1.10.1",
+    "@actions/core": "^3.0.0",
     "@actions/exec": "^2.0.0"
   },
   "devDependencies": {
