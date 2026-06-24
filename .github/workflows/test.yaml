@@ -1,0 +1,18 @@
+name: Test
+on:
+  pull_request:
+jobs:
+  transition-jira-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: GitHubSecurityLab/actions-permissions/monitor@v1
+        with:
+          config: ${{ vars.PERMISSIONS_CONFIG }}
+      - uses: 1password/load-secrets-action@v4
+        id: load-secrets
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          APP_ID: "op://APIx DevTools/APIx Github Bot/App ID"
+          APP_PEM: "op://APIx DevTools/APIx Github Bot/app.pem"
+      - run: |
+          echo "App ID=${{ steps.load-secrets.outputs.APP_ID }}"
