@@ -16,7 +16,11 @@ jobs:
           APP_SECRET: "op://APIx DevTools/APIx Github Bot/App Secret"
       - id: decode-app-secret
         run: |
-          echo "APP_PEM=$(echo "${{ steps.load-secrets.outputs.APP_SECRET }}" | base64 -d | openssl pkey -inform DER -outform PEM)" >> "$GITHUB_OUTPUT"
+          {
+            echo 'APP_PEM<<EOF'
+            echo "${{ steps.load-secrets.outputs.APP_SECRET }}" | base64 -d | openssl pkey -inform DER -outform PEM
+            echo EOF
+          } >> "$GITHUB_ENV"
       - name: Set Apix Bot token
         id: app-token
         uses: mongodb/apix-action/token@8549161120ce38b1e132ff833302a0ecbde58038
