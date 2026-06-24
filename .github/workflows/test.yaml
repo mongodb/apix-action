@@ -13,6 +13,19 @@ jobs:
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
           APP_ID: "op://APIx DevTools/APIx Github Bot/App ID"
-          APP_PEM: "op://APIx DevTools/APIx Github Bot/app.pem"
+          APP_SECRET: "op://APIx DevTools/APIx Github Bot/App Secret"
+      - id: decode-app-secret
+        run: |
+          echo "APP_PEM=$(echo "${{ steps.load-secrets.outputs.APP_SECRET }}" | base64 -d | openssl pkey -inform DER -outform PEM)" >> "$GITHUB_OUTPUT"
+      - name: Set Apix Bot token
+        id: app-token
+        uses: mongodb/apix-action/token@8549161120ce38b1e132ff833302a0ecbde58038
+        with:
+          app-id: ${{ steps.load-secrets.outputs.APP_ID }}
+          private-key: ${{ steps.decode-app-secret.outputs.APP_PEM }}
       - run: |
-          echo "App ID=$(echo "${{ steps.load-secrets.outputs.APP_ID }}" | wc -m) chars"
+          rm -rf app.pem
+      - env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          gh pr comment "${{ github.event.pull_request.html_url }}" --body "Test comment from workflow"
