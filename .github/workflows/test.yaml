@@ -2,7 +2,7 @@ name: Test
 on:
   pull_request:
 jobs:
-  transition-jira-test:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: GitHubSecurityLab/actions-permissions/monitor@v1
@@ -15,4 +15,4 @@ jobs:
           APP_ID: "op://APIx DevTools/APIx Github Bot/App ID"
           APP_PEM: "op://APIx DevTools/APIx Github Bot/app.pem"
       - run: |
-          echo "App ID=${{ steps.load-secrets.outputs.APP_ID }}"
+          echo "App ID=$(echo "${{ steps.load-secrets.outputs.APP_ID }}" | wc -m) chars"
