@@ -1,0 +1,73 @@
+name: Create Jira Ticket for New Issues (reusable)
+
+on:
+  workflow_call:
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  create-jira:
+    name: Create Jira ticket
+    runs-on: ubuntu-latest
+    steps:
+      - uses: GitHubSecurityLab/actions-permissions/monitor@v1
+        with:
+          config: ${{ vars.PERMISSIONS_CONFIG }}
+      - uses: 1password/load-secrets-action@v4
+        id: load-secrets
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          JIRA_API_TOKEN: "op://APIx/JIRA service account/credential"
+          APP_ID: "op://APIx/APIx Github Bot/App ID"
+          APP_SECRET: "op://APIx/APIx Github Bot/App Secret"
+      - id: decode-app-secret
+        run: |
+          {
+            echo 'APP_PEM<<EOF'
+            echo "${{ steps.load-secrets.outputs.APP_SECRET }}" | base64 -d | openssl pkey -inform DER -outform PEM
+            echo EOF
+          } >> "$GITHUB_OUTPUT"
+      - name: Set Apix Bot token
+        id: app-token
+        uses: mongodb/apix-action/token@8549161120ce38b1e132ff833302a0ecbde58038
+        with:
+          app-id: ${{ steps.load-secrets.outputs.APP_ID }}
+          private-key: ${{ steps.decode-app-secret.outputs.APP_PEM }}
+      - name: Determine repo config
+        id: config
+        run: |
+          case "${{ github.repository }}" in
+            */mongodb-atlas-local|*/atlas-local-lib|*/atlas-local-cli|*/atlas-local-lib-js)
+              echo "component=local-atlas-experience" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "component=AtlasCLI" >> "$GITHUB_OUTPUT"
+              ;;
+          esac
+      - name: Create Jira ticket
+        uses: mongodb/apix-action/create-jira@v14
+        id: create
+        with:
+          token: ${{ steps.load-secrets.outputs.JIRA_API_TOKEN }}
+          project-key: CLOUDP
+          summary: "[${{ github.event.repository.name }}] ${{ github.event.issue.title }}"
+          issuetype: Story
+          description: "This ticket tracks the following GitHub issue: ${{ github.event.issue.html_url }}"
+          components: ${{ steps.config.outputs.component }}
+          assignee: cloud-atlascli-escalation
+          extra-data: |
+            {
+              "fields": {
+                "fixVersions": [{"name": "Not Applicable"}],
+                "customfield_12751": [{"id": "22223"}],
+                "customfield_10257": {"id": "11861"}
+              }
+            }
+      - name: Add comment
+        uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          issue-number: ${{ github.event.issue.number }}
+          body: "Thanks for opening this issue. The ticket [${{ steps.create.outputs.issue-key }}](https://jira.mongodb.org/browse/${{ steps.create.outputs.issue-key }}) was created for internal tracking."

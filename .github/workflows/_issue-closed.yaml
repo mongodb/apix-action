@@ -1,0 +1,36 @@
+name: Close Jira Ticket on Issue Close (reusable)
+
+on:
+  workflow_call:
+
+permissions:
+  issues: read
+  contents: read
+
+jobs:
+  close-jira:
+    name: Close Jira ticket
+    runs-on: ubuntu-latest
+    steps:
+      - uses: GitHubSecurityLab/actions-permissions/monitor@v1
+        with:
+          config: ${{ vars.PERMISSIONS_CONFIG }}
+      - uses: 1password/load-secrets-action@v4
+        id: load-secrets
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          JIRA_API_TOKEN: "op://APIx/JIRA service account/credential"
+      - name: Find Jira key
+        id: find
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          JIRA_KEY=$(gh issue view ${{ github.event.issue.number }} --comments --repo ${{ github.repository }} | grep 'was created for internal tracking' | grep -oE 'CLOUDP-[0-9]+' | head -1)
+          echo "key=$JIRA_KEY" >> "$GITHUB_OUTPUT"
+      - name: Close Jira ticket
+        uses: mongodb/apix-action/transition-jira@v14
+        with:
+          token: ${{ steps.load-secrets.outputs.JIRA_API_TOKEN }}
+          issue-key: ${{ steps.find.outputs.key }}
+          transition-id: 1381
+          resolution: Done
