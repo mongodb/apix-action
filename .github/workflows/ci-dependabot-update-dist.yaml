@@ -12,12 +12,25 @@ jobs:
     - uses: GitHubSecurityLab/actions-permissions/monitor@v1
       with:
         config: ${{ vars.PERMISSIONS_CONFIG }}
+    - uses: 1password/load-secrets-action@v4
+      id: load-secrets
+      env:
+        OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+        APP_ID: "op://APIx/APIx Github Bot/App ID"
+        APP_SECRET: "op://APIx/APIx Github Bot/App Secret"
+    - id: decode-app-secret
+      run: |
+        {
+          echo 'APP_PEM<<EOF'
+          echo "${{ steps.load-secrets.outputs.APP_SECRET }}" | base64 -d | openssl pkey -inform DER -outform PEM
+          echo EOF
+        } >> "$GITHUB_OUTPUT"
     - name: Set Apix Bot token
       id: app-token
       uses: mongodb/apix-action/token@8549161120ce38b1e132ff833302a0ecbde58038
       with:
-        app-id: ${{ secrets.APIXBOT_APP_ID }}
-        private-key: ${{ secrets.APIXBOT_APP_PEM }}
+        app-id: ${{ steps.load-secrets.outputs.APP_ID }}
+        private-key: ${{ steps.decode-app-secret.outputs.APP_PEM }}
     - name: Checkout code
       uses: actions/checkout@v6
       with:
