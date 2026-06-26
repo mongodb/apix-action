@@ -32,7 +32,7 @@ jobs:
         app-id: ${{ steps.load-secrets.outputs.APP_ID }}
         private-key: ${{ steps.decode-app-secret.outputs.APP_PEM }}
     - name: Checkout code
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
       with:
         ref: ${{ github.head_ref }}
         token: ${{ steps.app-token.outputs.token }}

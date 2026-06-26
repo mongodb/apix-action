@@ -36,7 +36,7 @@ jobs:
           app-id: ${{ steps.load-secrets.outputs.APP_ID }}
           private-key: ${{ steps.decode-app-secret.outputs.APP_PEM }}
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 1
