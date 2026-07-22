@@ -24,7 +24,7 @@ jobs:
         id: config
         run: |
           case "${{ github.repository }}" in
-            */atlas-local-lib|*/atlas-local-cli|*/atlas-local-lib-js)
+            */atlas-local-lib|*/atlas-local-cli|*/atlas-local-lib-js|*/atlas-local-lib-py)
               echo "component=local-atlas-experience" >> "$GITHUB_OUTPUT"
               ;;
             *)

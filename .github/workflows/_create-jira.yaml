@@ -53,7 +53,7 @@ jobs:
         id: config
         run: |
           case "${{ github.repository }}" in
-            */mongodb-atlas-local|*/atlas-local-lib|*/atlas-local-cli|*/atlas-local-lib-js)
+            */mongodb-atlas-local|*/atlas-local-lib|*/atlas-local-cli|*/atlas-local-lib-js|*/atlas-local-lib-py)
               echo "component=local-atlas-experience" >> "$GITHUB_OUTPUT"
               echo "fix_version=Not Applicable" >> "$GITHUB_OUTPUT"
               ;;
