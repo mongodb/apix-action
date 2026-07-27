@@ -11,8 +11,7 @@ build-debug:
 	mkdir -p bin
 	cp sync/target/debug/{{binary}} bin/{{binary}}
 
-sync *args:
-	[ -f bin/{{binary}} ] || just build
+sync *args: build
 	./bin/{{binary}} {{args}}
 
 sync-with-gh-token *args:

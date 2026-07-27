@@ -1,3 +1,4 @@
-node_modules/
 .trunk/
 bin/
+node_modules/
+targets/

@@ -1,18 +1,40 @@
-use anyhow::Result;
+use std::env;
+
+use anyhow::{Context, Result};
 use clap::Parser;
+use tracing::info;
+use tracing_subscriber::EnvFilter;
 
 use crate::args::Args;
 
-mod apix_action;
 mod args;
+mod scan;
 mod shared;
+mod sync;
+mod sync_entry;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            EnvFilter::builder()
+                .with_default_directive(tracing::Level::INFO.into())
+                .from_env_lossy(),
+        )
+        .init();
+
     let args = Args::parse();
 
     let workflows_directory = args.workflows_directory_or_default();
-    let _workflows = apix_action::scan(workflows_directory).await;
+    info!(directory = %workflows_directory.display(), "scanning workflows");
+    let workflows = scan::scan(workflows_directory).await?;
+    info!(workflows = workflows.len(), "found syncable workflows");
+
+    let targets_directory = env::current_dir()
+        .context("reading working directory")?
+        .join("targets");
+    sync::sync(&workflows, targets_directory, args.token).await?;
+    info!("sync complete");
 
     Ok(())
 }
