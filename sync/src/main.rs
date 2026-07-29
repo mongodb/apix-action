@@ -8,6 +8,7 @@ use tracing_subscriber::EnvFilter;
 use crate::args::Args;
 
 mod args;
+mod labels;
 mod scan;
 mod shared;
 mod sync;
@@ -33,8 +34,12 @@ async fn main() -> Result<()> {
     let targets_directory = env::current_dir()
         .context("reading working directory")?
         .join("targets");
-    sync::sync(&workflows, targets_directory, args.token).await?;
+
+    sync::sync(&workflows, targets_directory, args.token.clone()).await?;
     info!("sync complete");
+
+    labels::ensure(&workflows, args.token).await?;
+    info!("labels are present in all repositories");
 
     Ok(())
 }
