@@ -6,7 +6,7 @@ use std::{
 
 use anyhow::{Context, Result};
 use git2::{
-    Cred, FetchOptions, RemoteCallbacks, Repository, ResetType,
+    Cred, FetchOptions, RemoteCallbacks, Repository, ResetType, StatusOptions,
     build::{CheckoutBuilder, RepoBuilder},
 };
 use redacted::FullyRedacted;
@@ -70,6 +70,41 @@ pub async fn sync(
     }
 
     Ok(())
+}
+
+/// Returns checked-out repositories with changes that need a pull request.
+pub fn repositories_needing_pr(workflows: &[SyncWorkflow], targets: &Path) -> Result<Vec<Repo>> {
+    let mut repositories: Vec<_> = workflows
+        .iter()
+        .flat_map(|workflow| workflow.sync.iter().cloned())
+        .collect::<HashSet<_>>()
+        .into_iter()
+        .collect();
+    repositories.sort_by(|left, right| {
+        left.owner
+            .as_str()
+            .cmp(right.owner.as_str())
+            .then_with(|| left.repository.as_str().cmp(right.repository.as_str()))
+    });
+
+    let mut changed = Vec::new();
+    for repository in repositories {
+        let path = targets
+            .join(repository.owner.as_str())
+            .join(repository.repository.as_str());
+        let git_repository = Repository::open(&path)
+            .with_context(|| format!("opening checked-out repository {}", path.display()))?;
+        let mut options = StatusOptions::new();
+        options
+            .include_untracked(true)
+            .recurse_untracked_dirs(true)
+            .exclude_submodules(true);
+        if !git_repository.statuses(Some(&mut options))?.is_empty() {
+            changed.push(repository);
+        }
+    }
+
+    Ok(changed)
 }
 
 fn checkout_repository(
@@ -147,13 +182,50 @@ fn refresh_repository(path: &std::path::Path, token: &GithubToken) -> Result<()>
 
 #[cfg(test)]
 mod tests {
-    use std::{fs, path::Path, time::SystemTime};
+    use std::{ffi::OsString, fs, path::Path, time::SystemTime};
 
     use anyhow::{Context, Result};
     use git2::{Repository, Signature};
+    use non_empty_string::NonEmptyString;
 
-    use super::refresh_repository;
-    use crate::shared::GithubToken;
+    use super::{refresh_repository, repositories_needing_pr};
+    use crate::shared::{GithubToken, Repo, SyncWorkflow};
+
+    #[test]
+    fn repositories_needing_pr_includes_untracked_changes() -> Result<()> {
+        let unique = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)?
+            .as_nanos();
+        let root =
+            std::env::temp_dir().join(format!("apix-sync-pr-{}-{unique}", std::process::id()));
+        let source_path = root.join("source");
+        let targets = root.join("targets");
+        let target_path = targets.join("owner/repository");
+
+        let source = Repository::init(&source_path)?;
+        commit(&source, "version one")?;
+        Repository::clone(source_path.to_string_lossy().as_ref(), &target_path)?;
+        fs::write(target_path.join("new.txt"), "change")?;
+
+        let workflow = SyncWorkflow {
+            file_name: OsString::from("workflow.yml"),
+            // Safe: both values are non-empty test literals.
+            sync: vec![Repo::new(
+                NonEmptyString::new("owner".to_string()).expect("non-empty owner"),
+                NonEmptyString::new("repository".to_string()).expect("non-empty repository"),
+            )],
+            contents: String::new(),
+        };
+        let changed = repositories_needing_pr(&[workflow], &targets)?;
+
+        assert_eq!(changed.len(), 1);
+        assert_eq!(changed[0].owner.as_str(), "owner");
+        assert_eq!(changed[0].repository.as_str(), "repository");
+
+        drop(source);
+        fs::remove_dir_all(root)?;
+        Ok(())
+    }
 
     #[test]
     fn refresh_repository_discards_local_changes() -> Result<()> {

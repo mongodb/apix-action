@@ -35,11 +35,17 @@ async fn main() -> Result<()> {
         .context("reading working directory")?
         .join("targets");
 
-    sync::sync(&workflows, targets_directory, args.token.clone()).await?;
+    sync::sync(&workflows, targets_directory.clone(), args.token.clone()).await?;
     info!("sync complete");
 
     labels::ensure(&workflows, args.token).await?;
     info!("labels are present in all repositories");
+
+    let repositories_needing_pr = sync::repositories_needing_pr(&workflows, &targets_directory)?;
+    info!(
+        repositories = ?repositories_needing_pr,
+        "repositories needing pull requests"
+    );
 
     Ok(())
 }
