@@ -25,7 +25,7 @@ jobs:
         id: owners
         run: echo "owners=$(just owners)" >> "$GITHUB_OUTPUT"
       - name: Upload sync binary
-  uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: sync-binary
           path: bin/sync
@@ -53,7 +53,7 @@ jobs:
       - name: Install just
         run: cargo install just --locked
       - name: Download sync binary
-      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: sync-binary
           path: bin
