@@ -2,7 +2,7 @@ use std::env;
 use std::path::PathBuf;
 
 use anyhow::{Context, Result};
-use clap::Parser;
+use clap::{Parser, Subcommand};
 use redacted::FullyRedacted;
 
 use crate::shared::{GithubToken, GithubTokenError};
@@ -10,15 +10,24 @@ use crate::shared::{GithubToken, GithubTokenError};
 #[derive(Parser, Debug)]
 #[command(version, about)]
 pub struct Args {
+    #[command(subcommand)]
+    pub command: Option<Command>,
+
     #[arg(long, env = "GH_TOKEN")]
     #[arg(value_parser = parse_github_token)]
-    pub token: FullyRedacted<GithubToken>,
+    pub token: Option<FullyRedacted<GithubToken>>,
 
     #[arg(long, env = "WORKFLOW_DIRECTORY")]
     pub workflows_directory: Option<PathBuf>,
 
     #[arg(long, env = "SYNC_OWNER")]
     pub owner: Option<String>,
+}
+
+#[derive(Subcommand, Debug)]
+pub enum Command {
+    /// Print owners declared by syncable workflows as a JSON array.
+    Owners,
 }
 
 // Parse and redact the GitHub token supplied through the CLI or environment.

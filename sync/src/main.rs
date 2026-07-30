@@ -5,7 +5,7 @@ use clap::Parser;
 use tracing::info;
 use tracing_subscriber::EnvFilter;
 
-use crate::args::Args;
+use crate::args::{Args, Command};
 
 mod args;
 mod labels;
@@ -30,6 +30,17 @@ async fn main() -> Result<()> {
     let args = Args::parse();
     let workflows_directory = args.workflows_directory_or_default()?;
 
+    if matches!(args.command, Some(Command::Owners)) {
+        let owners = scan::scan(workflows_directory)
+            .await?
+            .into_iter()
+            .flat_map(|workflow| workflow.sync.into_iter().map(|repository| repository.owner))
+            .map(|owner| owner.to_string())
+            .collect::<std::collections::BTreeSet<_>>();
+        println!("{}", serde_json::to_string(&owners)?);
+        return Ok(());
+    }
+
     // Find source workflows that declare repositories to sync.
     info!(directory = %workflows_directory.display(), "scanning workflows");
 
@@ -53,11 +64,12 @@ async fn main() -> Result<()> {
         .join("targets");
 
     // Check out all target repositories and write their applicable workflows.
-    sync::sync(&workflows, targets_directory.clone(), args.token.clone()).await?;
+    let token = args.token.context("GitHub token is required for sync")?;
+    sync::sync(&workflows, targets_directory.clone(), token.clone()).await?;
     info!("sync complete");
 
     // Ensure every target has `apix-action`, which the PR phase uses to find old generated PRs.
-    labels::ensure(&workflows, args.token.clone()).await?;
+    labels::ensure(&workflows, token.clone()).await?;
     info!("labels are present in all repositories");
 
     // Only create pull requests for repositories whose working tree changed.
@@ -77,7 +89,7 @@ async fn main() -> Result<()> {
         &workflows,
         repositories_needing_pr,
         targets_directory,
-        args.token,
+        token,
     )
     .await?;
 
