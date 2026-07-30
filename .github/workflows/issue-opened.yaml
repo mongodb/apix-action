@@ -15,5 +15,8 @@ permissions: {}
 
 jobs:
   create-jira:
+    permissions:
+      contents: read
+      issues: write
     uses: mongodb/apix-action/.github/workflows/_issue-opened.yaml@main
     secrets: inherit

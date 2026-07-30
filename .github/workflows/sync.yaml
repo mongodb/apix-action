@@ -1,0 +1,32 @@
+name: Sync workflows
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    name: Sync workflows to repositories
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set APIX bot token
+        id: app-token
+        uses: mongodb/apix-action/token@8549161120ce38b1e132ff833302a0ecbde58038
+        with:
+          app-id: ${{ secrets.APIXBOT_APP_ID }}
+          private-key: ${{ secrets.APIXBOT_APP_PEM }}
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      - name: Install just
+        run: cargo install just --locked
+      - name: Sync workflows
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          WORKFLOW_DIRECTORY: .github/workflows
+        run: just sync

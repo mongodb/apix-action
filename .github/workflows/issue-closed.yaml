@@ -15,5 +15,8 @@ permissions: {}
 
 jobs:
   close-jira:
+    permissions:
+      contents: read
+      issues: read
     uses: mongodb/apix-action/.github/workflows/_issue-closed.yaml@main
     secrets: inherit
