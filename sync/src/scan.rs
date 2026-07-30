@@ -62,6 +62,14 @@ fn parse_workflow(file_name: OsString, contents: &str) -> SyncWorkflow {
         .collect();
 
     let contents = filtered_lines.join("\n").trim().to_string();
+    let contents = if sync.is_empty() {
+        contents
+    } else {
+        format!(
+            "# synced from apix-actions/.github/workflows/{}\n{contents}",
+            file_name.to_string_lossy()
+        )
+    };
 
     SyncWorkflow {
         file_name,
@@ -92,7 +100,10 @@ mod tests {
             workflow.sync[0].repository,
             NonEmptyString::new("first".to_string()).unwrap()
         );
-        assert_eq!(workflow.contents, "name: test\njobs:");
+        assert_eq!(
+            workflow.contents,
+            "# synced from apix-actions/.github/workflows/test.yaml\nname: test\njobs:"
+        );
     }
 
     #[test]
@@ -103,5 +114,15 @@ mod tests {
 
         assert!(workflow.sync.is_empty());
         assert_eq!(workflow.contents, contents.trim());
+    }
+
+    #[test]
+    fn parse_workflow_adds_comment_when_contents_are_empty() {
+        let workflow = parse_workflow("test.yaml".into(), "# sync -> mongodb/test\n");
+
+        assert_eq!(
+            workflow.contents,
+            "# synced from apix-actions/.github/workflows/test.yaml\n"
+        );
     }
 }
