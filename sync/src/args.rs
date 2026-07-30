@@ -16,6 +16,9 @@ pub struct Args {
 
     #[arg(long, env = "WORKFLOW_DIRECTORY")]
     pub workflows_directory: Option<PathBuf>,
+
+    #[arg(long, env = "SYNC_OWNER")]
+    pub owner: Option<String>,
 }
 
 // Parse and redact the GitHub token supplied through the CLI or environment.

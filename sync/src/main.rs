@@ -33,7 +33,19 @@ async fn main() -> Result<()> {
     // Find source workflows that declare repositories to sync.
     info!(directory = %workflows_directory.display(), "scanning workflows");
 
-    let workflows = scan::scan(workflows_directory).await?;
+    let owner = args.owner.as_deref();
+    let workflows = scan::scan(workflows_directory)
+        .await?
+        .into_iter()
+        .filter_map(|mut workflow| {
+            if let Some(owner) = owner {
+                workflow
+                    .sync
+                    .retain(|repository| repository.owner.as_str() == owner);
+            }
+            (!workflow.sync.is_empty()).then_some(workflow)
+        })
+        .collect::<Vec<_>>();
     info!(workflows = workflows.len(), "found syncable workflows");
 
     let targets_directory = env::current_dir()

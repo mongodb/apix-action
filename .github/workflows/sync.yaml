@@ -10,6 +10,9 @@ jobs:
   sync:
     name: Sync workflows to repositories
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        owner: [mongodb, mongodb-js, mongodb-labs]
     steps:
       - name: Set APIX bot token
         id: app-token
@@ -17,6 +20,7 @@ jobs:
         with:
           app-id: ${{ secrets.APIXBOT_APP_ID }}
           private-key: ${{ secrets.APIXBOT_APP_PEM }}
+          owner: ${{ matrix.owner }}
       - name: Checkout
         uses: actions/checkout@v7.0.1
         with:
@@ -28,5 +32,6 @@ jobs:
       - name: Sync workflows
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          SYNC_OWNER: ${{ matrix.owner }}
           WORKFLOW_DIRECTORY: .github/workflows
         run: just sync
