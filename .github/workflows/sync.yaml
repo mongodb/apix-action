@@ -7,9 +7,35 @@ permissions:
   contents: read
 
 jobs:
+  build:
+    name: Build sync binary
+    runs-on: ubuntu-latest
+    outputs:
+      owners: ${{ steps.owners.outputs.owners }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      - name: Install just
+        run: cargo install just --locked
+      - name: Build
+        run: just build
+      - name: Find owners
+        id: owners
+        run: echo "owners=$(just owners)" >> "$GITHUB_OUTPUT"
+      - name: Upload sync binary
+  uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: sync-binary
+          path: bin/sync
   sync:
     name: Sync workflows to repositories
+    needs: build
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        owner: ${{ fromJSON(needs.build.outputs.owners) }}
     steps:
       - name: Set APIX bot token
         id: app-token
@@ -17,6 +43,7 @@ jobs:
         with:
           app-id: ${{ secrets.APIXBOT_APP_ID }}
           private-key: ${{ secrets.APIXBOT_APP_PEM }}
+          owner: ${{ matrix.owner }}
       - name: Checkout
         uses: actions/checkout@v7.0.1
         with:
@@ -25,8 +52,16 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
       - name: Install just
         run: cargo install just --locked
+      - name: Download sync binary
+      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: sync-binary
+          path: bin
       - name: Sync workflows
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          SYNC_OWNER: ${{ matrix.owner }}
           WORKFLOW_DIRECTORY: .github/workflows
-        run: just sync
+        run: |
+          chmod +x bin/sync
+          just sync
