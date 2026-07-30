@@ -14,5 +14,8 @@ permissions: {}
 jobs:
   close-jira:
     if: contains(github.event.pull_request.labels.*.name, 'auto_close_jira')
+    permissions:
+      contents: read
+      pull-requests: read
     uses: mongodb/apix-action/.github/workflows/_close-jira.yaml@main
     secrets: inherit
