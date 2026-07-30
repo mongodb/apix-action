@@ -28,7 +28,7 @@ async fn main() -> Result<()> {
         .init();
 
     let args = Args::parse();
-    let workflows_directory = args.workflows_directory_or_default();
+    let workflows_directory = args.workflows_directory_or_default()?;
 
     // Find source workflows that declare repositories to sync.
     info!(directory = %workflows_directory.display(), "scanning workflows");

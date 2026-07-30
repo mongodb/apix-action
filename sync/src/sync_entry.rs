@@ -19,11 +19,7 @@ impl FromStr for SyncEntry {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let create_err = || ParseSyncEntryError(s.to_string());
 
-        let repo = s.trim_start_matches(PREFIX);
-        // If the length is equal after trimming the prefix was missing
-        if s.len() == repo.len() {
-            return Err(create_err());
-        }
+        let repo = s.strip_prefix(PREFIX).ok_or_else(create_err)?;
 
         let (owner, name) = repo.split_once('/').ok_or_else(create_err)?;
 
@@ -94,5 +90,6 @@ mod tests {
         assert!(SyncEntry::from_str("# sync -> mongodb-js/").is_err());
         assert!(SyncEntry::from_str("# sync -> ../atlas-local-lib").is_err());
         assert!(SyncEntry::from_str("# sync -> mongodb-js/../other").is_err());
+        assert!(SyncEntry::from_str("# sync -> # sync -> mongodb/other").is_err());
     }
 }
