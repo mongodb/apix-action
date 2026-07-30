@@ -9,6 +9,7 @@ use crate::args::Args;
 
 mod args;
 mod labels;
+mod prs;
 mod scan;
 mod shared;
 mod sync;
@@ -38,7 +39,7 @@ async fn main() -> Result<()> {
     sync::sync(&workflows, targets_directory.clone(), args.token.clone()).await?;
     info!("sync complete");
 
-    labels::ensure(&workflows, args.token).await?;
+    labels::ensure(&workflows, args.token.clone()).await?;
     info!("labels are present in all repositories");
 
     let repositories_needing_pr = sync::repositories_needing_pr(&workflows, &targets_directory)?;
@@ -46,6 +47,8 @@ async fn main() -> Result<()> {
         repositories = ?repositories_needing_pr,
         "repositories needing pull requests"
     );
+
+    prs::create(repositories_needing_pr, targets_directory, args.token).await?;
 
     Ok(())
 }

@@ -148,19 +148,25 @@ fn fetch_options(token: &GithubToken) -> FetchOptions<'_> {
 
 fn refresh_repository(path: &std::path::Path, token: &GithubToken) -> Result<()> {
     let repository = Repository::open(path).context("opening existing repository")?;
-    let branch = {
-        let head = repository.head().context("reading checked-out branch")?;
-        head.shorthand()
-            .context("existing repository has detached HEAD")?
-            .to_owned()
-    };
-
     let mut options = fetch_options(token);
-    repository
+    let mut remote = repository
         .find_remote("origin")
-        .context("finding origin remote")?
-        .fetch(&[&branch], Some(&mut options), None)
+        .context("finding origin remote")?;
+    remote
+        .fetch(
+            &["refs/heads/*:refs/remotes/origin/*"],
+            Some(&mut options),
+            None,
+        )
         .context("fetching origin")?;
+    let branch = remote
+        .default_branch()
+        .context("reading origin default branch")?
+        .as_str()
+        .context("origin default branch is not UTF-8")?
+        .strip_prefix("refs/heads/")
+        .context("origin default branch has unexpected format")?
+        .to_owned();
 
     let remote_reference = repository
         .find_reference(&format!("refs/remotes/origin/{branch}"))
@@ -173,6 +179,15 @@ fn refresh_repository(path: &std::path::Path, token: &GithubToken) -> Result<()>
     repository
         .reset(target.as_object(), ResetType::Hard, Some(&mut checkout))
         .context("resetting working tree")?;
+    let current_branch = repository.head()?.shorthand()?.to_owned();
+    if current_branch != branch {
+        repository
+            .branch(&branch, &target, true)
+            .context("updating local default branch")?;
+    }
+    repository
+        .set_head(&format!("refs/heads/{branch}"))
+        .context("checking out origin default branch")?;
     repository
         .checkout_head(Some(&mut checkout))
         .context("cleaning working tree")?;
