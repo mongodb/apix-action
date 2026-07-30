@@ -15,6 +15,7 @@ pub struct ParseSyncEntryError(String);
 impl FromStr for SyncEntry {
     type Err = ParseSyncEntryError;
 
+    /// Parse `# sync -> owner/name` into a target repository.
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let create_err = || ParseSyncEntryError(s.to_string());
 
@@ -40,6 +41,7 @@ impl FromStr for SyncEntry {
     }
 }
 
+// Reject path traversal and characters that could produce unsafe checkout paths.
 fn is_safe_path_component(value: &str) -> bool {
     !matches!(value, "" | "." | "..")
         && value

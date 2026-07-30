@@ -7,12 +7,14 @@ use nutype::nutype;
 pub struct GithubToken(String);
 
 impl GithubToken {
+    /// Expose token only at authentication boundaries that require its raw value.
     pub(crate) fn expose_secret(&self) -> &str {
         self
     }
 }
 
 impl AsRef<[u8]> for GithubToken {
+    /// Return token bytes for libraries that accept byte slices.
     fn as_ref(&self) -> &[u8] {
         self.as_bytes()
     }
@@ -25,6 +27,7 @@ pub struct Repo {
 }
 
 impl Repo {
+    /// Create a repository identifier from validated owner and name components.
     pub fn new(owner: NonEmptyString, repository: NonEmptyString) -> Self {
         Self { owner, repository }
     }

@@ -14,6 +14,7 @@ use crate::shared::{GithubToken, Repo, SyncWorkflow};
 const LABEL: &str = "apix-action";
 const TITLE: &str = "ci: apix-action updates";
 
+/// Close old generated PRs, publish changes, and open replacement PRs.
 pub async fn create(
     workflows: &[SyncWorkflow],
     repositories: Vec<Repo>,
@@ -25,10 +26,12 @@ pub async fn create(
         .build()
         .context("creating GitHub client")?;
 
+    // Close open PRs carrying `apix-action` before opening replacement PRs.
     for repository in &repositories {
         close_labeled_pull_requests(&github, repository).await?;
     }
 
+    // One unique branch name is reused across target repositories.
     let branch = format!(
         "ci/api-action-{}",
         SystemTime::now()
@@ -78,6 +81,7 @@ pub async fn create(
     Ok(())
 }
 
+// Build the Markdown body listing workflows changed for one repository.
 fn description(workflows: &[SyncWorkflow], repository: &Repo) -> String {
     let mut actions: Vec<_> = workflows
         .iter()
@@ -98,6 +102,7 @@ fn description(workflows: &[SyncWorkflow], repository: &Repo) -> String {
     )
 }
 
+// Close open pull requests carrying the `apix-action` label.
 async fn close_labeled_pull_requests(github: &Octocrab, repository: &Repo) -> Result<()> {
     let pulls = github
         .pulls(repository.owner.as_str(), repository.repository.as_str())
@@ -138,6 +143,7 @@ async fn close_labeled_pull_requests(github: &Octocrab, repository: &Repo) -> Re
     Ok(())
 }
 
+// Commit current generated files on a branch and push it to origin.
 fn publish_changes(
     path: &Path,
     branch: &str,
@@ -156,6 +162,7 @@ fn publish_changes(
         .peel_to_commit()
         .context("resolving repository HEAD")?;
 
+    // Commit generated files on a fresh branch, then push it for the PR.
     repository.branch(branch, &commit, false)?;
     repository.set_head(&format!("refs/heads/{branch}"))?;
     repository.checkout_head(None)?;

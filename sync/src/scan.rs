@@ -48,7 +48,9 @@ pub async fn scan(directory: PathBuf) -> Result<Vec<SyncWorkflow>> {
     Ok(workflows)
 }
 
+// Remove sync metadata and retain the workflow body for target repositories.
 fn parse_workflow(file_name: OsString, contents: &str) -> SyncWorkflow {
+    // Sync headers are metadata for this tool, not valid workflow configuration.
     let mut sync = Vec::new();
     let filtered_lines: Vec<_> = contents
         .lines()

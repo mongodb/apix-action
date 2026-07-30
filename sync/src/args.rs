@@ -17,11 +17,13 @@ pub struct Args {
     pub workflows_directory: Option<PathBuf>,
 }
 
+// Parse and redact the GitHub token supplied through the CLI or environment.
 fn parse_github_token(value: &str) -> Result<FullyRedacted<GithubToken>, GithubTokenError> {
     value.parse().map(FullyRedacted::new)
 }
 
 impl Args {
+    /// Return configured workflow directory, or `.github/workflows` in current directory.
     pub fn workflows_directory_or_default(&self) -> PathBuf {
         if let Some(workflows_directory) = &self.workflows_directory {
             return workflows_directory.clone();

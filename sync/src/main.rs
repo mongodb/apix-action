@@ -16,7 +16,9 @@ mod sync;
 mod sync_entry;
 
 #[tokio::main]
+/// Scan source workflows, update target repositories, and open pull requests.
 async fn main() -> Result<()> {
+    // Set up logging
     tracing_subscriber::fmt()
         .with_env_filter(
             EnvFilter::builder()
@@ -26,9 +28,11 @@ async fn main() -> Result<()> {
         .init();
 
     let args = Args::parse();
-
     let workflows_directory = args.workflows_directory_or_default();
+
+    // Find source workflows that declare repositories to sync.
     info!(directory = %workflows_directory.display(), "scanning workflows");
+
     let workflows = scan::scan(workflows_directory).await?;
     info!(workflows = workflows.len(), "found syncable workflows");
 
@@ -36,12 +40,15 @@ async fn main() -> Result<()> {
         .context("reading working directory")?
         .join("targets");
 
+    // Check out all target repositories and write their applicable workflows.
     sync::sync(&workflows, targets_directory.clone(), args.token.clone()).await?;
     info!("sync complete");
 
+    // Ensure every target has `apix-action`, which the PR phase uses to find old generated PRs.
     labels::ensure(&workflows, args.token.clone()).await?;
     info!("labels are present in all repositories");
 
+    // Only create pull requests for repositories whose working tree changed.
     let repositories_needing_pr = sync::repositories_needing_pr(&workflows, &targets_directory)?;
     let repositories = repositories_needing_pr
         .iter()
@@ -53,6 +60,7 @@ async fn main() -> Result<()> {
         "repositories needing pull requests"
     );
 
+    // Close old `apix-action` PRs, then commit, push, and open replacement PRs.
     prs::create(
         &workflows,
         repositories_needing_pr,

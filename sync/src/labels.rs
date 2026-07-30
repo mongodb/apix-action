@@ -10,7 +10,9 @@ use crate::shared::{GithubToken, Repo, SyncWorkflow};
 const LABEL: &str = "apix-action";
 const LABEL_COLOR: &str = "0366d6";
 
+/// Create the `apix-action` label in every target repository if missing.
 pub async fn ensure(workflows: &[SyncWorkflow], token: FullyRedacted<GithubToken>) -> Result<()> {
+    // The PR phase uses this label to find and close previous generated pull requests.
     let repositories: HashSet<_> = workflows
         .iter()
         .flat_map(|workflow| workflow.sync.iter().cloned())
@@ -27,6 +29,7 @@ pub async fn ensure(workflows: &[SyncWorkflow], token: FullyRedacted<GithubToken
     Ok(())
 }
 
+// Create the `apix-action` label in one repository if it does not exist yet.
 async fn ensure_repository_label(github: &Octocrab, repository: &Repo) -> Result<()> {
     let issues = github.issues(repository.owner.as_str(), repository.repository.as_str());
     let Err(error) = issues.get_label(LABEL).await else {

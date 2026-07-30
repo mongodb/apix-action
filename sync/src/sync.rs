@@ -15,7 +15,7 @@ use tracing::{debug, error, info};
 
 use crate::shared::{GithubToken, Repo, SyncWorkflow};
 
-/// Checks out sync targets and writes their applicable workflows.
+/// Check out all target repositories and write their applicable workflows.
 pub async fn sync(
     workflows: &[SyncWorkflow],
     targets: PathBuf,
@@ -31,6 +31,7 @@ pub async fn sync(
     );
     let token = Arc::new(token);
     let mut tasks = JoinSet::new();
+    // Repository checkout uses blocking git2 calls, so run each checkout off the async runtime.
     for repository in repositories {
         let targets = targets.clone();
         let token = Arc::clone(&token);
@@ -51,6 +52,7 @@ pub async fn sync(
         return Err(error);
     }
 
+    // Write each source workflow only to repositories that declared it as a sync target.
     for workflow in workflows {
         for repository in &workflow.sync {
             let workflows_directory = targets
@@ -72,7 +74,7 @@ pub async fn sync(
     Ok(())
 }
 
-/// Returns checked-out repositories with changes that need a pull request.
+/// Return checked-out repositories whose working trees need a pull request.
 pub fn repositories_needing_pr(workflows: &[SyncWorkflow], targets: &Path) -> Result<Vec<Repo>> {
     let mut repositories: Vec<_> = workflows
         .iter()
@@ -107,6 +109,7 @@ pub fn repositories_needing_pr(workflows: &[SyncWorkflow], targets: &Path) -> Re
     Ok(changed)
 }
 
+// Clone a target repository, or refresh its existing checkout from origin.
 fn checkout_repository(
     repository: Repo,
     targets: &Path,
@@ -136,6 +139,7 @@ fn checkout_repository(
     Ok(())
 }
 
+// Build authenticated git fetch options for the GitHub token.
 fn fetch_options(token: &GithubToken) -> FetchOptions<'_> {
     let mut callbacks = RemoteCallbacks::new();
     callbacks
@@ -146,6 +150,7 @@ fn fetch_options(token: &GithubToken) -> FetchOptions<'_> {
     options
 }
 
+// Reset an existing checkout to origin's default branch and latest commit.
 fn refresh_repository(path: &std::path::Path, token: &GithubToken) -> Result<()> {
     let repository = Repository::open(path).context("opening existing repository")?;
     let mut options = fetch_options(token);
@@ -174,6 +179,7 @@ fn refresh_repository(path: &std::path::Path, token: &GithubToken) -> Result<()>
     let target = remote_reference
         .peel_to_commit()
         .context("resolving fetched branch")?;
+    // Discard all local, untracked, and ignored changes before applying source workflows.
     let mut checkout = CheckoutBuilder::new();
     checkout.force().remove_untracked(true).remove_ignored(true);
     repository
