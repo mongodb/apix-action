@@ -48,7 +48,13 @@ async fn main() -> Result<()> {
         "repositories needing pull requests"
     );
 
-    prs::create(repositories_needing_pr, targets_directory, args.token).await?;
+    prs::create(
+        &workflows,
+        repositories_needing_pr,
+        targets_directory,
+        args.token,
+    )
+    .await?;
 
     Ok(())
 }
