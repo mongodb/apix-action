@@ -19,6 +19,16 @@ A collection of reusable GitHub Actions for integrating with Jira and other comm
 
 Each action has its own README with detailed usage instructions. Click the links above to learn more about each action.
 
+## Sync Workflows
+
+To sync all workflows to their configured repositories, start the **Sync workflows** GitHub Actions workflow from the [Actions](../../actions/workflows/sync.yaml) page and select **Run workflow**.
+
+From the command line, run:
+
+```sh
+gh workflow run sync.yaml
+```
+
 ## License
 
 This project is licensed under the Apache License 2.0 - see the [LICENSE](./LICENSE) file for details.
