@@ -43,8 +43,13 @@ async fn main() -> Result<()> {
     info!("labels are present in all repositories");
 
     let repositories_needing_pr = sync::repositories_needing_pr(&workflows, &targets_directory)?;
+    let repositories = repositories_needing_pr
+        .iter()
+        .map(|repository| format!("{}/{}", repository.owner, repository.repository))
+        .collect::<Vec<_>>()
+        .join(", ");
     info!(
-        repositories = ?repositories_needing_pr,
+        repositories = %repositories,
         "repositories needing pull requests"
     );
 
