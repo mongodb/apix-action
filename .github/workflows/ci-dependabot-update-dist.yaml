@@ -12,7 +12,7 @@ jobs:
     - uses: GitHubSecurityLab/actions-permissions/monitor@v1
       with:
         config: ${{ vars.PERMISSIONS_CONFIG }}
-    - uses: 1password/load-secrets-action@v4
+    - uses: 1password/load-secrets-action@v5
       id: load-secrets
       env:
         OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
