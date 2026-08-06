@@ -23,19 +23,19 @@
   "author": "MongoDB <info@mongodb.com>",
   "license": "Apache-2.0",
   "dependencies": {
-    "@actions/core": "^2.0.3",
+    "@actions/core": "^3.0.1",
     "@actions/exec": "^3.0.0"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",
     "@types/node": "^25.9.1",
     "@vercel/ncc": "^0.38.4",
-    "globals": "^17.0.0",
+    "globals": "^17.9.0",
     "jest": "^30.2.0",
     "ncc": "^0.3.6",
     "prettier": "^3.8.3",
-    "ts-jest": "^29.4.10",
-    "typescript": "^5.9.3",
+    "ts-jest": "^29.4.12",
+    "typescript": "^6.0.3",
     "typescript-eslint": "^8.59.4"
   },
   "engines": {

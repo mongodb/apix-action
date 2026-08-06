@@ -8,7 +8,8 @@ module.exports = {
     '^.+\\.ts$': ['ts-jest', { tsconfig: { module: 'CommonJS', moduleResolution: 'Node' } }]
   },
   moduleNameMapper: {
-    '^@actions/exec$': '<rootDir>/node_modules/@actions/core/node_modules/@actions/exec/lib/exec.js'
+    '^@actions/core$': '<rootDir>/src/__tests__/mocks/actions-core.cjs',
+    '^@actions/exec$': '<rootDir>/src/__tests__/mocks/actions-exec.cjs'
   },
   moduleFileExtensions: ['ts', 'js', 'json', 'node']
 };
