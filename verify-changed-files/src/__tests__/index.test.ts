@@ -1,10 +1,11 @@
+import { jest as jestObject } from '@jest/globals';
 import * as core from '@actions/core';
 import * as exec from '@actions/exec';
 import { run } from '../index'; // Update the index.ts to export the run function
 
 // Mock the @actions/core and @actions/exec modules
-jest.mock('@actions/core');
-jest.mock('@actions/exec');
+jestObject.mock('@actions/core');
+jestObject.mock('@actions/exec');
 
 describe('verify-changed-files action', () => {
   let mockGetInput: jest.SpyInstance;
@@ -16,7 +17,7 @@ describe('verify-changed-files action', () => {
 
   beforeEach(() => {
     // Setup core mocks
-    mockGetInput = jest.spyOn(core, 'getInput').mockImplementation((name) => {
+    mockGetInput = jestObject.spyOn(core, 'getInput').mockImplementation((name) => {
       switch (name) {
         case 'files':
           return 'src/**/*.ts\npackage.json';
@@ -30,13 +31,13 @@ describe('verify-changed-files action', () => {
           return '';
       }
     });
-    mockSetOutput = jest.spyOn(core, 'setOutput').mockImplementation();
-    mockSetFailed = jest.spyOn(core, 'setFailed').mockImplementation();
-    mockInfo = jest.spyOn(core, 'info').mockImplementation();
-    mockDebug = jest.spyOn(core, 'debug').mockImplementation();
+    mockSetOutput = jestObject.spyOn(core, 'setOutput').mockImplementation(() => undefined);
+    mockSetFailed = jestObject.spyOn(core, 'setFailed').mockImplementation(() => undefined);
+    mockInfo = jestObject.spyOn(core, 'info').mockImplementation(() => undefined);
+    mockDebug = jestObject.spyOn(core, 'debug').mockImplementation(() => undefined);
     
     // Setup exec mock
-    mockExec = jest.spyOn(exec, 'exec').mockImplementation(async (cmd, args, options) => {
+    mockExec = jestObject.spyOn(exec, 'exec').mockImplementation(async (cmd, args, options) => {
       // Mock different Git responses based on command
       if (args && args.includes('diff') && !args.includes('--')) {
         // Main git diff command
@@ -53,7 +54,7 @@ describe('verify-changed-files action', () => {
   });
 
   afterEach(() => {
-    jest.resetAllMocks();
+    jestObject.resetAllMocks();
   });
 
   test('detects changed files correctly', async () => {
@@ -72,10 +73,10 @@ describe('verify-changed-files action', () => {
 
   test('handles case with no changed files', async () => {
     // Reset mocks to clear previous test state
-    jest.resetAllMocks();
+    jestObject.resetAllMocks();
 
     // Re-setup core mocks for this test
-    mockGetInput = jest.spyOn(core, 'getInput').mockImplementation((name) => {
+    mockGetInput = jestObject.spyOn(core, 'getInput').mockImplementation((name) => {
       switch (name) {
         case 'files':
           return 'src/**/*.ts\npackage.json';
@@ -89,13 +90,13 @@ describe('verify-changed-files action', () => {
           return '';
       }
     });
-    mockSetOutput = jest.spyOn(core, 'setOutput').mockImplementation();
-    mockSetFailed = jest.spyOn(core, 'setFailed').mockImplementation();
-    mockInfo = jest.spyOn(core, 'info').mockImplementation();
-    mockDebug = jest.spyOn(core, 'debug').mockImplementation();
+    mockSetOutput = jestObject.spyOn(core, 'setOutput').mockImplementation(() => undefined);
+    mockSetFailed = jestObject.spyOn(core, 'setFailed').mockImplementation(() => undefined);
+    mockInfo = jestObject.spyOn(core, 'info').mockImplementation(() => undefined);
+    mockDebug = jestObject.spyOn(core, 'debug').mockImplementation(() => undefined);
     
     // Override exec mock to return empty for all commands
-    mockExec = jest.spyOn(exec, 'exec').mockImplementation(async (cmd, args, options) => {
+    mockExec = jestObject.spyOn(exec, 'exec').mockImplementation(async (cmd, args, options) => {
       // Always return empty string for all git commands
       options?.listeners?.stdout?.(Buffer.from(''));
       return 0;
@@ -111,10 +112,10 @@ describe('verify-changed-files action', () => {
 
   test('uses default value when files input is not provided', async () => {
     // Reset mocks to clear previous test state
-    jest.resetAllMocks();
+    jestObject.resetAllMocks();
 
     // Setup core mocks without files input
-    mockGetInput = jest.spyOn(core, 'getInput').mockImplementation((name) => {
+    mockGetInput = jestObject.spyOn(core, 'getInput').mockImplementation((name) => {
       switch (name) {
         case 'files':
           return '';  // Empty input to test default behavior
@@ -128,11 +129,11 @@ describe('verify-changed-files action', () => {
           return '';
       }
     });
-    mockSetOutput = jest.spyOn(core, 'setOutput').mockImplementation();
-    mockInfo = jest.spyOn(core, 'info').mockImplementation();
+    mockSetOutput = jestObject.spyOn(core, 'setOutput').mockImplementation(() => undefined);
+    mockInfo = jestObject.spyOn(core, 'info').mockImplementation(() => undefined);
     
     // Mock exec with some changed files
-    mockExec = jest.spyOn(exec, 'exec').mockImplementation(async (cmd, args, options) => {
+    mockExec = jestObject.spyOn(exec, 'exec').mockImplementation(async (cmd, args, options) => {
       // When checking the entire repo, return some files
       if (args && args.includes('diff') && !args.includes('--')) {
         options?.listeners?.stdout?.(Buffer.from('README.md\nLICENSE'));
@@ -151,13 +152,13 @@ describe('verify-changed-files action', () => {
 
   test('handles errors gracefully', async () => {
     // Reset mocks to clear previous test state
-    jest.resetAllMocks();
+    jestObject.resetAllMocks();
     
     // Make getInput throw an error
-    mockGetInput = jest.spyOn(core, 'getInput').mockImplementationOnce(() => {
+    mockGetInput = jestObject.spyOn(core, 'getInput').mockImplementationOnce(() => {
       throw new Error('Test error');
     });
-    mockSetFailed = jest.spyOn(core, 'setFailed').mockImplementation();
+    mockSetFailed = jestObject.spyOn(core, 'setFailed').mockImplementation(() => undefined);
     
     await run();
     

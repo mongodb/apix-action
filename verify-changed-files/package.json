@@ -2,6 +2,7 @@
   "name": "verify-changed-files",
   "version": "0.0.0",
   "private": true,
+  "type": "module",
   "description": "GitHub Action to check if files have changed and output the results",
   "main": "dist/index.js",
   "scripts": {

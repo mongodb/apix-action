@@ -92,7 +92,7 @@ export async function run(): Promise<void> {
 }
 
 // Only call run() if executed directly
-if (require.main === module) {
+if (process.env.NODE_ENV !== 'test') {
   run().finally(() => {
     process.exit();
   });
