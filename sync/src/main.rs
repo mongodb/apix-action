@@ -85,13 +85,7 @@ async fn main() -> Result<()> {
     );
 
     // Close old `apix-action` PRs, then commit, push, and open replacement PRs.
-    prs::create(
-        &workflows,
-        repositories_needing_pr,
-        targets_directory,
-        token,
-    )
-    .await?;
+    prs::create(repositories_needing_pr, targets_directory, token).await?;
 
     Ok(())
 }
