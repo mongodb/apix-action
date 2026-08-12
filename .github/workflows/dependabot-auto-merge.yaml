@@ -1,4 +1,5 @@
 # sync -> mongodb/atlas-local-lib-py
+# sync -> mongodb/mongodb-atlas-cli
 
 name: Auto merge dependabot prs
 
