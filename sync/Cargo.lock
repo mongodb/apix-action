@@ -1968,6 +1968,7 @@ dependencies = [
  "nutype",
  "octocrab",
  "redacted",
+ "serde",
  "serde_json",
  "thiserror",
  "tokio",
