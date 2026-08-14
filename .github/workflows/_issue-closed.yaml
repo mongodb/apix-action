@@ -12,10 +12,10 @@ jobs:
     name: Close Jira ticket
     runs-on: ubuntu-latest
     steps:
-      - uses: GitHubSecurityLab/actions-permissions/monitor@v1
+      - uses: GitHubSecurityLab/actions-permissions/monitor@bf82d13b9b10051d224345ab9184f5ede0a94289 # v1
         with:
           config: ${{ vars.PERMISSIONS_CONFIG }}
-      - uses: 1password/load-secrets-action@v5
+      - uses: 1password/load-secrets-action@8a61560e8e31bb0596b64b0df75696368c948c04 # v5
         id: load-secrets
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
@@ -28,7 +28,7 @@ jobs:
           JIRA_KEY=$(gh issue view ${{ github.event.issue.number }} --comments --repo ${{ github.repository }} | grep 'was created for internal tracking' | grep -oE 'CLOUDP-[0-9]+' | head -1)
           echo "key=$JIRA_KEY" >> "$GITHUB_OUTPUT"
       - name: Close Jira ticket
-        uses: mongodb/apix-action/transition-jira@v14
+        uses: mongodb/apix-action/transition-jira@8549161120ce38b1e132ff833302a0ecbde58038 # v14
         with:
           token: ${{ steps.load-secrets.outputs.JIRA_API_TOKEN }}
           issue-key: ${{ steps.find.outputs.key }}
