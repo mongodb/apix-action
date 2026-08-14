@@ -9,10 +9,10 @@ jobs:
     runs-on: ubuntu-latest
     if: github.actor == 'dependabot[bot]'
     steps:
-    - uses: GitHubSecurityLab/actions-permissions/monitor@v1
+    - uses: GitHubSecurityLab/actions-permissions/monitor@bf82d13b9b10051d224345ab9184f5ede0a94289 # v1
       with:
         config: ${{ vars.PERMISSIONS_CONFIG }}
-    - uses: 1password/load-secrets-action@v5
+    - uses: 1password/load-secrets-action@e544b780808654ba8ceba5fb2fe2897103d92ff4 # v5
       id: load-secrets
       env:
         OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
@@ -27,17 +27,17 @@ jobs:
         } >> "$GITHUB_OUTPUT"
     - name: Set Apix Bot token
       id: app-token
-      uses: mongodb/apix-action/token@8549161120ce38b1e132ff833302a0ecbde58038
+      uses: mongodb/apix-action/token@8549161120ce38b1e132ff833302a0ecbde58038 # v14
       with:
         app-id: ${{ steps.load-secrets.outputs.APP_ID }}
         private-key: ${{ steps.decode-app-secret.outputs.APP_PEM }}
     - name: Checkout code
-      uses: actions/checkout@v7
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       with:
         ref: ${{ github.head_ref }}
         token: ${{ steps.app-token.outputs.token }}
         fetch-depth: 0
-    - uses: actions/setup-node@v7
+    - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
       with:
         node-version-file: 'create-jira/package.json'
     - run: |

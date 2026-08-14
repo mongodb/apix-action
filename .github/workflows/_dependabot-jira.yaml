@@ -12,10 +12,10 @@ jobs:
     name: Create Jira ticket
     runs-on: ubuntu-latest
     steps:
-      - uses: GitHubSecurityLab/actions-permissions/monitor@v1
+      - uses: GitHubSecurityLab/actions-permissions/monitor@bf82d13b9b10051d224345ab9184f5ede0a94289 # v1
         with:
           config: ${{ vars.PERMISSIONS_CONFIG }}
-      - uses: 1password/load-secrets-action@v5
+      - uses: 1password/load-secrets-action@e544b780808654ba8ceba5fb2fe2897103d92ff4 # v5
         id: load-secrets
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
@@ -32,7 +32,7 @@ jobs:
               ;;
           esac
       - name: Create Jira ticket
-        uses: mongodb/apix-action/create-jira@v14
+        uses: mongodb/apix-action/create-jira@8549161120ce38b1e132ff833302a0ecbde58038 # v14
         id: create
         with:
           token: ${{ steps.load-secrets.outputs.JIRA_API_TOKEN }}
@@ -51,7 +51,7 @@ jobs:
               }
             }
       - name: Add comment
-        uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9
+        uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9 # v5
         with:
           token: ${{ github.token }}
           issue-number: ${{ github.event.pull_request.number }}

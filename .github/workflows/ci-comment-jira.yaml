@@ -9,12 +9,12 @@ jobs:
   comment-jira-build:
     runs-on: ubuntu-latest
     steps:
-      - uses: GitHubSecurityLab/actions-permissions/monitor@v1
+      - uses: GitHubSecurityLab/actions-permissions/monitor@bf82d13b9b10051d224345ab9184f5ede0a94289 # v1
         with:
           config: ${{ vars.PERMISSIONS_CONFIG }}
       - name: Checkout repository
-        uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
             node-version-file: comment-jira/package.json
       - name: install dependencies
@@ -41,12 +41,12 @@ jobs:
   comment-jira-unit-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: GitHubSecurityLab/actions-permissions/monitor@v1
+      - uses: GitHubSecurityLab/actions-permissions/monitor@bf82d13b9b10051d224345ab9184f5ede0a94289 # v1
         with:
           config: ${{ vars.PERMISSIONS_CONFIG }}
       - name: Checkout repository
-        uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
             node-version-file: comment-jira/package.json
       - name: install dependencies
@@ -60,11 +60,11 @@ jobs:
   comment-jira-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: GitHubSecurityLab/actions-permissions/monitor@v1
+      - uses: GitHubSecurityLab/actions-permissions/monitor@bf82d13b9b10051d224345ab9184f5ede0a94289 # v1
         with:
           config: ${{ vars.PERMISSIONS_CONFIG }}
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Write inline Nginx config
         run: |
           cat <<EOF > nginx.conf
@@ -114,4 +114,4 @@ jobs:
           comment: |
             Test comment from GitHub Actions
             with multiple lines
-          api-base: http://localhost:55000 
+          api-base: http://localhost:55000
