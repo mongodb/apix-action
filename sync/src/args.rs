@@ -23,9 +23,9 @@ pub struct Args {
     #[arg(long, env = "SYNC_OWNER")]
     pub owner: Option<String>,
 
-    /// Print created pull requests as JSON.
-    #[arg(long)]
-    pub json: bool,
+    /// Write created pull requests as JSON to a file.
+    #[arg(long, value_name = "FILE")]
+    pub json: Option<PathBuf>,
 }
 
 #[derive(Subcommand, Debug)]
@@ -55,5 +55,24 @@ impl Args {
         Ok(env::current_dir()
             .context("reading working directory")?
             .join(".github/workflows"))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use clap::Parser;
+
+    use super::Args;
+
+    #[test]
+    fn json_accepts_output_path() {
+        // Safe: arguments are compile-time test literals.
+        let args =
+            Args::try_parse_from(["sync", "--json", "results.json"]).expect("valid CLI arguments");
+
+        assert_eq!(
+            args.json.as_deref(),
+            Some(std::path::Path::new("results.json"))
+        );
     }
 }
