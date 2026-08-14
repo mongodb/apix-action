@@ -20,6 +20,7 @@ mod sync_entry;
 async fn main() -> Result<()> {
     // Set up logging
     tracing_subscriber::fmt()
+        .with_writer(std::io::stderr)
         .with_env_filter(
             EnvFilter::builder()
                 .with_default_directive(tracing::Level::INFO.into())
@@ -93,8 +94,10 @@ async fn main() -> Result<()> {
 
     // Close old `apix-action` PRs, then commit, push, and open replacement PRs.
     let pull_requests = prs::create(repositories_needing_pr, targets_directory, token).await?;
-    if args.json {
-        println!("{}", serde_json::to_string_pretty(&pull_requests)?);
+    if let Some(path) = args.json {
+        let json = serde_json::to_string_pretty(&pull_requests)?;
+        std::fs::write(&path, json)
+            .with_context(|| format!("writing pull request results to {}", path.display()))?;
     }
 
     Ok(())
