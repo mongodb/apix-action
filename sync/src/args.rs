@@ -22,12 +22,22 @@ pub struct Args {
 
     #[arg(long, env = "SYNC_OWNER")]
     pub owner: Option<String>,
+
+    /// Print created pull requests as JSON.
+    #[arg(long)]
+    pub json: bool,
 }
 
 #[derive(Subcommand, Debug)]
 pub enum Command {
     /// Print owners declared by syncable workflows as a JSON array.
     Owners,
+
+    /// Render a Markdown summary from created pull request JSON files.
+    Summary {
+        #[arg(long, default_value = "sync-prs")]
+        directory: PathBuf,
+    },
 }
 
 // Parse and redact the GitHub token supplied through the CLI or environment.

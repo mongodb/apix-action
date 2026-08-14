@@ -30,15 +30,22 @@ async fn main() -> Result<()> {
     let args = Args::parse();
     let workflows_directory = args.workflows_directory_or_default()?;
 
-    if matches!(args.command, Some(Command::Owners)) {
-        let owners = scan::scan(workflows_directory)
-            .await?
-            .into_iter()
-            .flat_map(|workflow| workflow.sync.into_iter().map(|repository| repository.owner))
-            .map(|owner| owner.to_string())
-            .collect::<std::collections::BTreeSet<_>>();
-        println!("{}", serde_json::to_string(&owners)?);
-        return Ok(());
+    match args.command {
+        Some(Command::Owners) => {
+            let owners = scan::scan(workflows_directory)
+                .await?
+                .into_iter()
+                .flat_map(|workflow| workflow.sync.into_iter().map(|repository| repository.owner))
+                .map(|owner| owner.to_string())
+                .collect::<std::collections::BTreeSet<_>>();
+            println!("{}", serde_json::to_string(&owners)?);
+            return Ok(());
+        }
+        Some(Command::Summary { directory }) => {
+            print!("{}", prs::summary_directory(directory)?);
+            return Ok(());
+        }
+        None => {}
     }
 
     // Find source workflows that declare repositories to sync.
@@ -85,7 +92,10 @@ async fn main() -> Result<()> {
     );
 
     // Close old `apix-action` PRs, then commit, push, and open replacement PRs.
-    prs::create(repositories_needing_pr, targets_directory, token).await?;
+    let pull_requests = prs::create(repositories_needing_pr, targets_directory, token).await?;
+    if args.json {
+        println!("{}", serde_json::to_string_pretty(&pull_requests)?);
+    }
 
     Ok(())
 }
