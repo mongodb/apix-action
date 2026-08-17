@@ -30,7 +30,7 @@
     "@types/jest": "^30.0.0",
     "@types/node": "^26.1.2",
     "@vercel/ncc": "^0.44.1",
-    "globals": "^17.9.0",
+    "globals": "^17.11.0",
     "jest": "^30.4.2",
     "ncc": "^0.3.6",
     "prettier": "^3.8.3",
