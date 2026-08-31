@@ -34,7 +34,7 @@
     "@types/lodash": "^4.17.25",
     "@types/node": "^26.4.0",
     "@types/request": "^2.48.13",
-    "jest": "^30.4.2",
+    "jest": "^30.5.0",
     "rollup": "^4.63.1",
     "ts-jest": "^29.4.12",
     "tslib": "^2.6.2",
