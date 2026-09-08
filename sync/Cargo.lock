@@ -1964,6 +1964,7 @@ dependencies = [
  "anyhow",
  "clap",
  "git2",
+ "jsonwebtoken",
  "non-empty-string",
  "nutype",
  "octocrab",

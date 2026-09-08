@@ -13,6 +13,23 @@ impl GithubToken {
     }
 }
 
+#[nutype(validate(not_empty), derive(Clone, Deref, FromStr))]
+pub struct AppPrivateKey(String);
+
+impl AppPrivateKey {
+    /// Expose the key only where the app JWT is signed.
+    pub(crate) fn expose_secret(&self) -> &str {
+        self
+    }
+}
+
+impl AsRef<[u8]> for AppPrivateKey {
+    /// Return key bytes for libraries that accept byte slices.
+    fn as_ref(&self) -> &[u8] {
+        self.as_bytes()
+    }
+}
+
 impl AsRef<[u8]> for GithubToken {
     /// Return token bytes for libraries that accept byte slices.
     fn as_ref(&self) -> &[u8] {

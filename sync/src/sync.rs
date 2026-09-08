@@ -11,7 +11,7 @@ use git2::{
 };
 use redacted::FullyRedacted;
 use tokio::task::JoinSet;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, info};
 
 use crate::{
     scan::MARKER_PREFIX,
@@ -92,19 +92,14 @@ pub fn target_repositories(workflows: &[SyncWorkflow]) -> HashSet<Repo> {
 /// target owns itself are never touched.
 ///
 /// Repositories are supplied by the caller, so a repository dropped from every header is
-/// still swept as long as it appears in the app installation.
+/// still swept as long as it appears in the app installation. An empty `workflows` slice
+/// is meaningful here: an owner whose workflows are all retired keeps nothing, so every
+/// marked file is removed. Callers must reject an empty scan before reaching this point.
 pub async fn remove_orphans(
     workflows: &[SyncWorkflow],
     repositories: &[Repo],
     targets: &Path,
 ) -> Result<()> {
-    // Without source workflows a run cannot tell "retired" from "never scanned",
-    // and removing every marked file would wipe each target's synced workflows.
-    if workflows.is_empty() {
-        warn!("no source workflows found, skipping orphan removal");
-        return Ok(());
-    }
-
     for repository in repositories {
         let expected = expected_workflows(workflows, repository);
 
@@ -458,8 +453,9 @@ mod tests {
         Ok(())
     }
 
+    // An owner whose workflows are all retired legitimately has no source workflows.
     #[tokio::test]
-    async fn remove_orphans_skips_when_no_source_workflows() -> Result<()> {
+    async fn remove_orphans_clears_repository_with_no_source_workflows() -> Result<()> {
         let marker = super::MARKER_PREFIX;
         let targets = target_with_workflows(
             "orphan-empty",
@@ -467,10 +463,9 @@ mod tests {
         )?;
         let workflows = targets.join("owner/repository/.github/workflows");
 
-        // A misconfigured run must not wipe every synced workflow.
         remove_orphans(&[], &[repo("repository")], &targets).await?;
 
-        assert!(workflows.join("synced.yaml").exists());
+        assert!(!workflows.join("synced.yaml").exists());
 
         fs::remove_dir_all(targets)?;
         Ok(())

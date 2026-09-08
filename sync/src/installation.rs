@@ -1,13 +1,14 @@
-use std::collections::HashSet;
+use std::collections::{BTreeSet, HashSet};
 
 use anyhow::{Context, Result};
-use octocrab::Octocrab;
+use octocrab::{Octocrab, models::AppId};
+use redacted::FullyRedacted;
 use serde::Deserialize;
 use tracing::{debug, info};
 
 use crate::{
     scan::MARKER_PREFIX,
-    shared::{Repo, SyncWorkflow, expected_workflows},
+    shared::{AppPrivateKey, Repo, SyncWorkflow, expected_workflows},
 };
 
 const WORKFLOWS_PATH: &str = ".github/workflows";
@@ -27,6 +28,42 @@ struct InstallationRepository {
 #[derive(Deserialize)]
 struct InstallationOwner {
     login: String,
+}
+
+/// List every owner the app is installed on.
+///
+/// Authenticates as the app itself rather than as one installation, so owners whose
+/// workflows are all retired are still swept.
+pub async fn owners(
+    app_id: u64,
+    private_key: &FullyRedacted<AppPrivateKey>,
+) -> Result<BTreeSet<String>> {
+    let key = jsonwebtoken::EncodingKey::from_rsa_pem(private_key.expose_secret().as_bytes())
+        .context("parsing app private key")?;
+    let github = Octocrab::builder()
+        .app(AppId(app_id), key)
+        .build()
+        .context("creating GitHub app client")?;
+
+    let installations = github
+        .apps()
+        .installations()
+        .per_page(PER_PAGE)
+        .send()
+        .await
+        .context("listing app installations")?;
+    let installations = github
+        .all_pages(installations)
+        .await
+        .context("listing remaining app installations")?;
+
+    let owners: BTreeSet<_> = installations
+        .into_iter()
+        .map(|installation| installation.account.login)
+        .collect();
+    info!(owners = owners.len(), "listed app installation owners");
+
+    Ok(owners)
 }
 
 /// List repositories the app installation can reach, optionally limited to one owner.

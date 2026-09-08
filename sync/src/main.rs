@@ -2,7 +2,7 @@ use std::env;
 
 use anyhow::{Context, Result};
 use clap::Parser;
-use tracing::info;
+use tracing::{info, warn};
 use tracing_subscriber::EnvFilter;
 
 use crate::{
@@ -37,12 +37,25 @@ async fn main() -> Result<()> {
 
     match args.command {
         Some(Command::Owners) => {
-            let owners = scan::scan(workflows_directory)
-                .await?
-                .into_iter()
-                .flat_map(|workflow| workflow.sync.into_iter().map(|repository| repository.owner))
-                .map(|owner| owner.to_string())
-                .collect::<std::collections::BTreeSet<_>>();
+            // Listing installations covers owners whose workflows are all retired, which
+            // the sync headers no longer mention. Without app credentials there is nothing
+            // to ask, so fall back to the headers.
+            let owners = match (args.app_id, &args.private_key) {
+                (Some(app_id), Some(private_key)) => {
+                    installation::owners(app_id, private_key).await?
+                }
+                _ => {
+                    warn!("no app credentials, deriving owners from sync headers");
+                    scan::scan(workflows_directory)
+                        .await?
+                        .into_iter()
+                        .flat_map(|workflow| {
+                            workflow.sync.into_iter().map(|repository| repository.owner)
+                        })
+                        .map(|owner| owner.to_string())
+                        .collect()
+                }
+            };
             println!("{}", serde_json::to_string(&owners)?);
             return Ok(());
         }
@@ -57,8 +70,15 @@ async fn main() -> Result<()> {
     info!(directory = %workflows_directory.display(), "scanning workflows");
 
     let owner = args.owner.as_deref();
-    let workflows = scan::scan(workflows_directory)
-        .await?
+    let scanned = scan::scan(workflows_directory).await?;
+    // An empty scan cannot tell "everything retired" from "wrong directory", and would
+    // let the sweep wipe every synced workflow. An owner with no targets is fine; a
+    // source tree with none is not.
+    if scanned.is_empty() {
+        anyhow::bail!("no syncable workflows found, refusing to sync");
+    }
+
+    let workflows = scanned
         .into_iter()
         .filter_map(|mut workflow| {
             if let Some(owner) = owner {

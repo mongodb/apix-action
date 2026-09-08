@@ -12,4 +12,6 @@ Each run sweeps every repository the app is installed on, not just current targe
 
 Only files carrying the generated `# synced from apix-actions/...` marker are removed, so workflows a target repository owns itself are never touched.
 
-The owner matrix is still built from `# sync ->` headers, so an owner with no remaining targets is not swept. Keep at least one header per owner until its workflows are cleaned up.
+The owner matrix is built by listing the app's installations, so an owner is swept even once all of its workflows are retired.
+
+A run that finds no syncable workflows at all refuses to sync, so a misconfigured workflow directory cannot be mistaken for "everything retired".
