@@ -5,7 +5,8 @@ edition = "2024"
 
 [dependencies]
 anyhow = "1.0.104"
-clap = { version = "4.6.4", features = ["env", "derive"] }
+base64 = "0.22.1"
+clap ={ version = "4.6.4", features = ["env", "derive"] }
 git2 = { version = "0.21.0", features = ["https"] }
 non-empty-string = "0.2.6"
 nutype = "0.7.0"
