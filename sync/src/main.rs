@@ -5,9 +5,13 @@ use clap::Parser;
 use tracing::info;
 use tracing_subscriber::EnvFilter;
 
-use crate::args::{Args, Command};
+use crate::{
+    args::{Args, Command},
+    shared::Repo,
+};
 
 mod args;
+mod installation;
 mod labels;
 mod prs;
 mod scan;
@@ -71,9 +75,42 @@ async fn main() -> Result<()> {
         .context("reading working directory")?
         .join("targets");
 
-    // Check out all target repositories and write their applicable workflows.
     let token = args.token.context("GitHub token is required for sync")?;
-    sync::sync(&workflows, targets_directory.clone(), token.clone()).await?;
+
+    // Sweep the whole installation, so a repository dropped from every header is still
+    // cleaned up. Only repositories with leftovers are added, keeping clones proportional
+    // to actual changes rather than to installation size.
+    let github = octocrab::Octocrab::builder()
+        .personal_token(token.expose_secret())
+        .build()
+        .context("creating GitHub client")?;
+    let installation = installation::repositories(&github, owner).await?;
+    let orphaned = installation::repositories_with_orphans(&github, &installation, &workflows)
+        .await
+        .context("finding repositories with orphaned workflows")?;
+
+    let mut repositories: Vec<Repo> = sync::target_repositories(&workflows)
+        .into_iter()
+        .chain(orphaned)
+        .collect::<std::collections::HashSet<_>>()
+        .into_iter()
+        .collect();
+    repositories.sort_by(|left, right| {
+        left.owner
+            .as_str()
+            .cmp(right.owner.as_str())
+            .then_with(|| left.repository.as_str().cmp(right.repository.as_str()))
+    });
+    info!(repositories = repositories.len(), "repositories to sync");
+
+    // Check out all target repositories and write their applicable workflows.
+    sync::sync(
+        &workflows,
+        &repositories,
+        targets_directory.clone(),
+        token.clone(),
+    )
+    .await?;
     info!("sync complete");
 
     // Ensure every target has `apix-action`, which the PR phase uses to find old generated PRs.
@@ -81,7 +118,7 @@ async fn main() -> Result<()> {
     info!("labels are present in all repositories");
 
     // Only create pull requests for repositories whose working tree changed.
-    let repositories_needing_pr = sync::repositories_needing_pr(&workflows, &targets_directory)?;
+    let repositories_needing_pr = sync::repositories_needing_pr(&repositories, &targets_directory)?;
     let repositories = repositories_needing_pr
         .iter()
         .map(|repository| format!("{}/{}", repository.owner, repository.repository))
