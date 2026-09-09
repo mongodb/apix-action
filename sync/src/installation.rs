@@ -8,7 +8,8 @@ use tracing::{debug, info};
 
 use crate::{
     scan::MARKER_PREFIX,
-    shared::{AppPrivateKey, Repo, SyncWorkflow, expected_workflows},
+    shared::{AppPrivateKey, GithubToken, Repo, SyncWorkflow, expected_workflows},
+    sync,
 };
 
 const WORKFLOWS_PATH: &str = ".github/workflows";
@@ -66,8 +67,44 @@ pub async fn owners(
     Ok(owners)
 }
 
+/// Collect the repositories a sync run has to check out.
+///
+/// Combines the repositories the headers target with any installation repository still
+/// holding a synced workflow the source no longer sends it, so leftovers are cleaned up
+/// without cloning repositories that need no change.
+pub async fn repositories_to_sync(
+    token: &FullyRedacted<GithubToken>,
+    owner: Option<&str>,
+    workflows: &[SyncWorkflow],
+) -> Result<Vec<Repo>> {
+    let github = Octocrab::builder()
+        .personal_token(token.expose_secret())
+        .build()
+        .context("creating GitHub client")?;
+
+    let installation = repositories(&github, owner).await?;
+    let orphaned = repositories_with_orphans(&github, &installation, workflows)
+        .await
+        .context("finding repositories with orphaned workflows")?;
+
+    let mut repositories: Vec<_> = sync::target_repositories(workflows)
+        .into_iter()
+        .chain(orphaned)
+        .collect::<HashSet<_>>()
+        .into_iter()
+        .collect();
+    repositories.sort_by(|left, right| {
+        left.owner
+            .as_str()
+            .cmp(right.owner.as_str())
+            .then_with(|| left.repository.as_str().cmp(right.repository.as_str()))
+    });
+
+    Ok(repositories)
+}
+
 /// List repositories the app installation can reach, optionally limited to one owner.
-pub async fn repositories(github: &Octocrab, owner: Option<&str>) -> Result<Vec<Repo>> {
+async fn repositories(github: &Octocrab, owner: Option<&str>) -> Result<Vec<Repo>> {
     let mut repositories = Vec::new();
     let mut page = 1u32;
     loop {
@@ -112,7 +149,7 @@ pub async fn repositories(github: &Octocrab, owner: Option<&str>) -> Result<Vec<
 ///
 /// Reads each repository's workflow directory over the API so that only repositories
 /// actually needing a change are cloned.
-pub async fn repositories_with_orphans(
+async fn repositories_with_orphans(
     github: &Octocrab,
     repositories: &[Repo],
     workflows: &[SyncWorkflow],

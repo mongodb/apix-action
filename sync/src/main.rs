@@ -2,13 +2,10 @@ use std::env;
 
 use anyhow::{Context, Result};
 use clap::Parser;
-use tracing::{info, warn};
+use tracing::info;
 use tracing_subscriber::EnvFilter;
 
-use crate::{
-    args::{Args, Command},
-    shared::Repo,
-};
+use crate::args::{Args, Command};
 
 mod args;
 mod installation;
@@ -38,24 +35,12 @@ async fn main() -> Result<()> {
     match args.command {
         Some(Command::Owners) => {
             // Listing installations covers owners whose workflows are all retired, which
-            // the sync headers no longer mention. Without app credentials there is nothing
-            // to ask, so fall back to the headers.
-            let owners = match (args.app_id, &args.private_key) {
-                (Some(app_id), Some(private_key)) => {
-                    installation::owners(app_id, private_key).await?
-                }
-                _ => {
-                    warn!("no app credentials, deriving owners from sync headers");
-                    scan::scan(workflows_directory)
-                        .await?
-                        .into_iter()
-                        .flat_map(|workflow| {
-                            workflow.sync.into_iter().map(|repository| repository.owner)
-                        })
-                        .map(|owner| owner.to_string())
-                        .collect()
-                }
-            };
+            // the sync headers no longer mention.
+            let app_id = args.app_id.context("app ID is required to list owners")?;
+            let private_key = args
+                .private_key
+                .context("app private key is required to list owners")?;
+            let owners = installation::owners(app_id, &private_key).await?;
             println!("{}", serde_json::to_string(&owners)?);
             return Ok(());
         }
@@ -97,30 +82,7 @@ async fn main() -> Result<()> {
 
     let token = args.token.context("GitHub token is required for sync")?;
 
-    // Sweep the whole installation, so a repository dropped from every header is still
-    // cleaned up. Only repositories with leftovers are added, keeping clones proportional
-    // to actual changes rather than to installation size.
-    let github = octocrab::Octocrab::builder()
-        .personal_token(token.expose_secret())
-        .build()
-        .context("creating GitHub client")?;
-    let installation = installation::repositories(&github, owner).await?;
-    let orphaned = installation::repositories_with_orphans(&github, &installation, &workflows)
-        .await
-        .context("finding repositories with orphaned workflows")?;
-
-    let mut repositories: Vec<Repo> = sync::target_repositories(&workflows)
-        .into_iter()
-        .chain(orphaned)
-        .collect::<std::collections::HashSet<_>>()
-        .into_iter()
-        .collect();
-    repositories.sort_by(|left, right| {
-        left.owner
-            .as_str()
-            .cmp(right.owner.as_str())
-            .then_with(|| left.repository.as_str().cmp(right.repository.as_str()))
-    });
+    let repositories = installation::repositories_to_sync(&token, owner, &workflows).await?;
     info!(repositories = repositories.len(), "repositories to sync");
 
     // Check out all target repositories and write their applicable workflows.
