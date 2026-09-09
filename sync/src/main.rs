@@ -56,9 +56,10 @@ async fn main() -> Result<()> {
 
     let owner = args.owner.as_deref();
     let scanned = scan::scan(workflows_directory).await?;
-    // An empty scan cannot tell "everything retired" from "wrong directory", and would
-    // let the sweep wipe every synced workflow. An owner with no targets is fine; a
-    // source tree with none is not.
+    // Checked before the owner filter below. An owner with no workflows left is
+    // legitimate: everything it had was retired, and its copies should be swept. A source
+    // tree with none is indistinguishable from a wrong WORKFLOW_DIRECTORY, and sweeping on
+    // that would wipe every synced workflow.
     if scanned.is_empty() {
         anyhow::bail!("no syncable workflows found, refusing to sync");
     }
