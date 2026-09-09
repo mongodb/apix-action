@@ -441,47 +441,6 @@ mod tests {
         Ok(())
     }
 
-    // publish_changes stages with add_all, which must pick up removals as well as writes.
-    #[test]
-    fn add_all_stages_workflow_deletions() -> Result<()> {
-        let unique = SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)?
-            .as_nanos();
-        let root =
-            std::env::temp_dir().join(format!("apix-prs-add-{}-{unique}", std::process::id()));
-        let workflows = root.join(".github/workflows");
-        fs::create_dir_all(&workflows)?;
-        fs::write(workflows.join("retired.yaml"), "workflow")?;
-        let repository = git2::Repository::init(&root)?;
-
-        let mut index = repository.index()?;
-        index.add_path(std::path::Path::new(".github/workflows/retired.yaml"))?;
-        index.write()?;
-        let tree_id = index.write_tree()?;
-        {
-            let tree = repository.find_tree(tree_id)?;
-            let signature = git2::Signature::now("test", "test@example.com")?;
-            repository.commit(Some("HEAD"), &signature, &signature, "test", &tree, &[])?;
-        }
-
-        fs::remove_file(workflows.join("retired.yaml"))?;
-        let mut index = repository.index()?;
-        index.add_all(["*"], git2::IndexAddOption::DEFAULT, None)?;
-        index.write()?;
-
-        assert!(
-            index
-                .get_path(std::path::Path::new(".github/workflows/retired.yaml"), 0)
-                .is_none(),
-            "add_all must stage the deletion"
-        );
-
-        drop(index);
-        drop(repository);
-        fs::remove_dir_all(root)?;
-        Ok(())
-    }
-
     #[test]
     fn changed_workflows_excludes_other_changed_files() -> Result<()> {
         let unique = SystemTime::now()

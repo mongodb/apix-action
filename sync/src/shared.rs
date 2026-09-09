@@ -75,8 +75,8 @@ impl FromStr for Repo {
     }
 }
 
-/// Reject path traversal and characters that could produce unsafe checkout paths.
-pub fn is_safe_path_component(value: &str) -> bool {
+// Reject path traversal and characters that could produce unsafe checkout paths.
+fn is_safe_path_component(value: &str) -> bool {
     !matches!(value, "" | "." | "..")
         && value
             .bytes()
