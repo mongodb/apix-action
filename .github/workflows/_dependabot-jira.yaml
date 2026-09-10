@@ -1,15 +1,13 @@
-name: Create Jira Ticket for Dependabot PRs (reusable)
+name: Dependabot PR automation (reusable)
 
 on:
   workflow_call:
 
-permissions:
-  pull-requests: write
-  contents: read
+permissions: {}
 
 jobs:
-  create-jira:
-    name: Create Jira ticket
+  dependabot:
+    name: Create Jira ticket and auto merge
     runs-on: ubuntu-latest
     steps:
       - uses: GitHubSecurityLab/actions-permissions/monitor@bf82d13b9b10051d224345ab9184f5ede0a94289 # v1
@@ -20,6 +18,8 @@ jobs:
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
           JIRA_API_TOKEN: "op://APIx/JIRA service account/credential"
+          APP_ID: "op://APIx/APIx Github Bot/App ID"
+          APP_SECRET: "op://APIx/APIx Github Bot/App Secret"
       - name: Determine repo config
         id: config
         run: |
@@ -50,10 +50,23 @@ jobs:
                 "customfield_10257": {"id": "11861"}
               }
             }
+      - id: decode-app-secret
+        run: |
+          {
+            echo 'APP_PEM<<EOF'
+            echo "${{ steps.load-secrets.outputs.APP_SECRET }}" | base64 -d | openssl pkey -inform DER -outform PEM
+            echo EOF
+          } >> "$GITHUB_OUTPUT"
+      - name: Set Apix Bot token
+        id: app-token
+        uses: mongodb/apix-action/token@8549161120ce38b1e132ff833302a0ecbde58038 # v14
+        with:
+          app-id: ${{ steps.load-secrets.outputs.APP_ID }}
+          private-key: ${{ steps.decode-app-secret.outputs.APP_PEM }}
       - name: Add comment
         uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9 # v5
         with:
-          token: ${{ github.token }}
+          token: ${{ steps.app-token.outputs.token }}
           issue-number: ${{ github.event.pull_request.number }}
           body: |
             The ticket [${{ steps.create.outputs.issue-key }}](https://jira.mongodb.org/browse/${{ steps.create.outputs.issue-key }}) was created for internal tracking.
@@ -61,5 +74,13 @@ jobs:
             Note: Jira ticket will be closed automatically when this PR is merged.
       - name: Add auto_close_jira label
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: gh pr edit "${{ github.event.pull_request.html_url }}" --add-label "auto_close_jira"
+      - name: Approve PR
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: gh pr review "${{ github.event.pull_request.html_url }}" --approve
+      - name: Auto merge PR
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: gh pr merge "${{ github.event.pull_request.html_url }}" --auto --squash
