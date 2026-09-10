@@ -5,7 +5,7 @@ use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use redacted::FullyRedacted;
 
-use crate::shared::{GithubToken, GithubTokenError};
+use crate::shared::{AppPrivateKey, AppPrivateKeyError, GithubToken, GithubTokenError};
 
 #[derive(Parser, Debug)]
 #[command(version, about)]
@@ -23,6 +23,15 @@ pub struct Args {
     #[arg(long, env = "SYNC_OWNER")]
     pub owner: Option<String>,
 
+    /// App ID used to list installations for the `owners` command.
+    #[arg(long, env = "APP_ID")]
+    pub app_id: Option<u64>,
+
+    /// App private key used to list installations for the `owners` command.
+    #[arg(long, env = "APP_PRIVATE_KEY")]
+    #[arg(value_parser = parse_private_key)]
+    pub private_key: Option<FullyRedacted<AppPrivateKey>>,
+
     /// Write created pull requests as JSON to a file.
     #[arg(long, value_name = "FILE")]
     pub json: Option<PathBuf>,
@@ -38,6 +47,11 @@ pub enum Command {
         #[arg(long, default_value = "sync-prs")]
         directory: PathBuf,
     },
+}
+
+// Parse and redact the app private key supplied through the CLI or environment.
+fn parse_private_key(value: &str) -> Result<FullyRedacted<AppPrivateKey>, AppPrivateKeyError> {
+    value.parse().map(FullyRedacted::new)
 }
 
 // Parse and redact the GitHub token supplied through the CLI or environment.
