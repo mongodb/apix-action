@@ -31,6 +31,16 @@ jobs:
               echo "component=AtlasCLI" >> "$GITHUB_OUTPUT"
               ;;
           esac
+          # mongodb-atlas-cli tracks dependency bumps against its next release;
+          # every other repository files them without a fix version.
+          case "${{ github.repository }}" in
+            */mongodb-atlas-cli)
+              echo "fix-version=next-atlascli-release" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "fix-version=Not Applicable" >> "$GITHUB_OUTPUT"
+              ;;
+          esac
       - name: Create Jira ticket
         uses: mongodb/apix-action/create-jira@8549161120ce38b1e132ff833302a0ecbde58038 # v14
         id: create
@@ -45,7 +55,7 @@ jobs:
           extra-data: |
             {
               "fields": {
-                "fixVersions": [{"name": "Not Applicable"}],
+                "fixVersions": [{"name": "${{ steps.config.outputs.fix-version }}"}],
                 "customfield_12751": [{"id": "22223"}],
                 "customfield_10257": {"id": "11861"}
               }
