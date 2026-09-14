@@ -27,7 +27,7 @@ jobs:
         } >> "$GITHUB_OUTPUT"
     - name: Set Apix Bot token
       id: app-token
-      uses: mongodb/apix-action/token@8549161120ce38b1e132ff833302a0ecbde58038 # v14
+      uses: mongodb/apix-action/token@f7d2400a387dea2661651b14bbaf8c8f46c8bf66 # v16
       with:
         app-id: ${{ steps.load-secrets.outputs.APP_ID }}
         private-key: ${{ steps.decode-app-secret.outputs.APP_PEM }}
