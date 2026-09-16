@@ -32,7 +32,7 @@ jobs:
               ;;
           esac
       - name: Create Jira ticket
-        uses: mongodb/apix-action/create-jira@8549161120ce38b1e132ff833302a0ecbde58038 # v14
+        uses: mongodb/apix-action/create-jira@f7d2400a387dea2661651b14bbaf8c8f46c8bf66 # v16
         id: create
         with:
           token: ${{ steps.load-secrets.outputs.JIRA_API_TOKEN }}
