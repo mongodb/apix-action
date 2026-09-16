@@ -39,7 +39,7 @@ jobs:
           JIRA_KEY=$(gh pr view "$URL" --comments | grep 'was created for internal tracking' | grep -oE 'CLOUDP-[0-9]+' | head -1)
           echo "key=$JIRA_KEY" >> "$GITHUB_OUTPUT"
       - name: Transition Jira ticket
-        uses: mongodb/apix-action/transition-jira@8549161120ce38b1e132ff833302a0ecbde58038 # v14
+        uses: mongodb/apix-action/transition-jira@f7d2400a387dea2661651b14bbaf8c8f46c8bf66 # v16
         with:
           token: ${{ steps.load-secrets.outputs.JIRA_API_TOKEN }}
           issue-key: ${{ steps.find.outputs.key }}
