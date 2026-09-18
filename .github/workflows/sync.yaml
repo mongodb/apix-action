@@ -13,6 +13,14 @@ jobs:
     outputs:
       owners: ${{ steps.owners.outputs.owners }}
     steps:
+      # Local references are rewritten to the commit being synced. Dispatched from a
+      # branch, that commit may never reach main, leaving every target pointing at a
+      # permalink that dies with the branch.
+      - name: Require main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "sync must be dispatched from main, got ${{ github.ref }}" >&2
+          exit 1
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Install Rust
@@ -21,11 +29,24 @@ jobs:
         run: cargo install just --locked
       - name: Build
         run: just build
+      - uses: 1password/load-secrets-action@70062d7a876d3eb6334754fa26efd2fbd90c32f2 # v5
+        id: load-secrets
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          APP_ID: "op://APIx/APIx Github Bot/App ID"
+          APP_SECRET: "op://APIx/APIx Github Bot/App Secret"
+      - id: decode-app-secret
+        run: |
+          {
+            echo 'APP_PEM<<EOF'
+            echo "${{ steps.load-secrets.outputs.APP_SECRET }}" | base64 -d | openssl pkey -inform DER -outform PEM
+            echo EOF
+          } >> "$GITHUB_OUTPUT"
       - name: Find owners
         id: owners
         env:
-          APP_ID: ${{ secrets.APIXBOT_APP_ID }}
-          APP_PRIVATE_KEY: ${{ secrets.APIXBOT_APP_PEM }}
+          APP_ID: ${{ steps.load-secrets.outputs.APP_ID }}
+          APP_PRIVATE_KEY: ${{ steps.decode-app-secret.outputs.APP_PEM }}
         run: echo "owners=$(just owners)" >> "$GITHUB_OUTPUT"
       - name: Upload sync binary
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -43,12 +64,25 @@ jobs:
       - name: Initialize PR results
         run: |
           printf '[]\n' > "sync-prs-${{ matrix.owner }}.json"
+      - uses: 1password/load-secrets-action@70062d7a876d3eb6334754fa26efd2fbd90c32f2 # v5
+        id: load-secrets
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          APP_ID: "op://APIx/APIx Github Bot/App ID"
+          APP_SECRET: "op://APIx/APIx Github Bot/App Secret"
+      - id: decode-app-secret
+        run: |
+          {
+            echo 'APP_PEM<<EOF'
+            echo "${{ steps.load-secrets.outputs.APP_SECRET }}" | base64 -d | openssl pkey -inform DER -outform PEM
+            echo EOF
+          } >> "$GITHUB_OUTPUT"
       - name: Set APIX bot token
         id: app-token
         uses: mongodb/apix-action/token@f7d2400a387dea2661651b14bbaf8c8f46c8bf66 # v16
         with:
-          app-id: ${{ secrets.APIXBOT_APP_ID }}
-          private-key: ${{ secrets.APIXBOT_APP_PEM }}
+          app-id: ${{ steps.load-secrets.outputs.APP_ID }}
+          private-key: ${{ steps.decode-app-secret.outputs.APP_PEM }}
           owner: ${{ matrix.owner }}
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
