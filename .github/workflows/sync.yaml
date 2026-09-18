@@ -13,6 +13,14 @@ jobs:
     outputs:
       owners: ${{ steps.owners.outputs.owners }}
     steps:
+      # Local references are rewritten to the commit being synced. Dispatched from a
+      # branch, that commit may never reach main, leaving every target pointing at a
+      # permalink that dies with the branch.
+      - name: Require main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "sync must be dispatched from main, got ${{ github.ref }}" >&2
+          exit 1
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Install Rust
