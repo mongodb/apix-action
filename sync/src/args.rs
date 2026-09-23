@@ -5,7 +5,7 @@ use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use redacted::FullyRedacted;
 
-use crate::shared::{AppPrivateKey, AppPrivateKeyError, GithubToken, GithubTokenError};
+use crate::shared::{AppPrivateKey, AppPrivateKeyError, GithubToken, GithubTokenError, Repo};
 
 #[derive(Parser, Debug)]
 #[command(version, about)]
@@ -31,6 +31,10 @@ pub struct Args {
     #[arg(long, env = "APP_PRIVATE_KEY")]
     #[arg(value_parser = parse_private_key)]
     pub private_key: Option<FullyRedacted<AppPrivateKey>>,
+
+    /// Repository that rewritten local workflow references point at.
+    #[arg(long, env = "GITHUB_REPOSITORY", default_value = "mongodb/apix-action")]
+    pub source_repository: Repo,
 
     /// Write created pull requests as JSON to a file.
     #[arg(long, value_name = "FILE")]

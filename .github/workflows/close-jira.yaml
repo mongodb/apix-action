@@ -17,5 +17,5 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
-    uses: mongodb/apix-action/.github/workflows/_close-jira.yaml@5cedcea33c4925777e1a7e8646d87ac8593562d8 # main
+    uses: ./.github/workflows/_close-jira.yaml
     secrets: inherit
