@@ -29,6 +29,11 @@ export interface JiraIssue {
   };
 }
 
+interface JiraTransition {
+  id: string;
+  to?: { name?: string };
+}
+
 function buildRequestBody(projectKey: string, summary: string, description: string, issuetype: string, labels: string[], components: string[], assignee: string, extraData?: { [key: string]: any }): JiraIssue {
   const body: JiraIssue = { fields: { project: { key: projectKey }, summary: summary } };
   if (description != "") {
@@ -56,13 +61,11 @@ function buildRequestBody(projectKey: string, summary: string, description: stri
   return body;
 }
 
-async function createJiraIssue(token: string, apiBase: string, projectKey: string, summary: string, description: string, issuetype: string, labels: string[], components: string[], assignee: string, extraData?: { [key: string]: any }): Promise<{ response: request.Response, responseBody: any }> {
-  const body = buildRequestBody(projectKey, summary, description, issuetype, labels, components, assignee, extraData);
-
+async function jiraRequest(token: string, url: string, method: string, body?: any): Promise<any> {
   return await new Promise((resolve, reject) => {
     request({
-      url: `${apiBase}/rest/api/2/issue`,
-      method: "POST",
+      url: url,
+      method: method,
       headers: {
         "Content-Type": "application/json",
         Authorization: "Bearer " + token,
@@ -78,11 +81,40 @@ async function createJiraIssue(token: string, apiBase: string, projectKey: strin
         reject(new Error(response.statusCode + " " + response.statusMessage + "\n" + JSON.stringify(responseBody)));
         return;
       }
-      resolve({
-        response, responseBody
-      });
+      resolve(responseBody);
     });
   });
+}
+
+async function createJiraIssue(token: string, apiBase: string, projectKey: string, summary: string, description: string, issuetype: string, labels: string[], components: string[], assignee: string, extraData?: { [key: string]: any }): Promise<any> {
+  const body = buildRequestBody(projectKey, summary, description, issuetype, labels, components, assignee, extraData);
+
+  return await jiraRequest(token, `${apiBase}/rest/api/2/issue`, "POST", body);
+}
+
+async function getJiraIssueStatus(token: string, apiBase: string, issueKey: string): Promise<string | undefined> {
+  const responseBody = await jiraRequest(token, `${apiBase}/rest/api/2/issue/${issueKey}?fields=status`, "GET");
+  return responseBody.fields?.status?.name;
+}
+
+async function transitionJiraIssue(token: string, apiBase: string, issueKey: string, status: string): Promise<void> {
+  const currentStatus = await getJiraIssueStatus(token, apiBase, issueKey);
+  if (currentStatus == status) {
+    return;
+  }
+
+  const responseBody = await jiraRequest(token, `${apiBase}/rest/api/2/issue/${issueKey}/transitions`, "GET");
+  const transitions = responseBody.transitions ?? [];
+  const transition = transitions.find((value: JiraTransition) => value.to?.name == status);
+  if (transition == undefined) {
+    const availableStatuses = transitions
+      .map((value: JiraTransition) => value.to?.name)
+      .filter((value: string | undefined): value is string => value != undefined)
+      .join(", ");
+    throw new Error(`No transition found for ${issueKey} from ${currentStatus ?? "current status"} to ${status}. Available statuses: ${availableStatuses || "none"}`);
+  }
+
+  await jiraRequest(token, `${apiBase}/rest/api/2/issue/${issueKey}/transitions`, "POST", { transition: { id: transition.id } });
 }
 
 export async function main() {
@@ -95,6 +127,7 @@ export async function main() {
     const labels = core.getInput('labels');
     const components = core.getInput('components');
     const assignee = core.getInput('assignee');
+    const status = core.getInput('status');
     const extraData = core.getInput('extra-data');
     const apiBase = core.getInput('api-base');
     const labelList = labels.split(",").filter(value => value != "");
@@ -109,13 +142,17 @@ export async function main() {
       }
     }
 
-    const { responseBody } = await createJiraIssue(token, apiBase, projectKey, summary, description, issuetype, labelList, componentList, assignee, extraDataObject);
+    const responseBody = await createJiraIssue(token, apiBase, projectKey, summary, description, issuetype, labelList, componentList, assignee, extraDataObject);
 
     if (!responseBody.key) {
       throw new Error("No issue key found in response: " + JSON.stringify(responseBody));
     }
 
     core.setOutput("issue-key", responseBody.key);
+
+    if (status != "") {
+      await transitionJiraIssue(token, apiBase, responseBody.key, status);
+    }
   } catch (error) {
     if (error instanceof Error) {
       core.setFailed(error);

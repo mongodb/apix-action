@@ -13,6 +13,7 @@ A GitHub Action to create a Jira issue with customizable fields.
 | `api-base` | Base URL for the Jira API | No | `https://jira.mongodb.org` |
 | `issuetype` | Name of the issue type | No | |
 | `assignee` | Assignee of the issue | No | |
+| `status` | Status to transition the issue to after creation | No | |
 | `labels` | Labels for the issue (comma separated) | No | |
 | `components` | Components for the issue (comma separated) | No | |
 | `extra-data` | Extra data to be merged in the final request | No | |
@@ -36,6 +37,7 @@ A GitHub Action to create a Jira issue with customizable fields.
     description: "Detailed description of the bug..."
     issuetype: Bug
     assignee: johndoe
+    status: In Progress
     labels: bug,priority-high
     components: frontend,api
     extra-data: |
@@ -50,6 +52,8 @@ A GitHub Action to create a Jira issue with customizable fields.
 ## Custom Fields
 
 Use the `extra-data` input to set custom fields and other advanced properties. The value should be valid JSON that will be merged with the main request body.
+
+If `status` is set, the action creates the issue first and then transitions it. The value must match a target status available from the issue's initial Jira workflow state.
 
 Example:
 

@@ -19,6 +19,8 @@ inputs:
     description: "Name of the issue type"
   assignee:
     description: "Assignee of the issue"
+  status:
+    description: "Status to transition the issue to after creation"
   labels:
     description: "Labels for the issue. Comma separated."
   components:
