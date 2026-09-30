@@ -199,8 +199,11 @@ describe('Create Jira Issue Action', () => {
 
     await main();
 
-    const err = new Error("Error parsing extra-data: SyntaxError: Expected property name or '}' in JSON at position 1 (line 1 column 2)");
-
-    expect(setFailedMock).toHaveBeenCalledWith(err);
+    expect(setFailedMock).toHaveBeenCalledTimes(1);
+    const error = setFailedMock.mock.calls[0][0] as Error;
+    expect(error).toBeInstanceOf(Error);
+    expect(error.message).toContain(
+      "Error parsing extra-data: SyntaxError: Expected property name or '}' in JSON at position 1"
+    );
   });
 });

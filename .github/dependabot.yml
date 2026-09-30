@@ -13,6 +13,10 @@ updates:
     directory: "/create-jira"
     schedule:
       interval: "weekly"
+    ignore:
+      # ts-jest 29.x requires typescript <7. Drop this once ts-jest supports 7.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: "npm"
     directory: "/verify-changed-files"
     schedule:

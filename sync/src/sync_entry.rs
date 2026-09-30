@@ -20,29 +20,10 @@ impl FromStr for SyncEntry {
         let create_err = || ParseSyncEntryError(s.to_string());
 
         let repo = s.strip_prefix(PREFIX).ok_or_else(create_err)?;
+        let repo = repo.parse().map_err(|_| create_err())?;
 
-        let (owner, name) = repo.split_once('/').ok_or_else(create_err)?;
-
-        if !is_safe_path_component(owner) || !is_safe_path_component(name) {
-            return Err(create_err());
-        }
-
-        // Convert to non-empty strings
-        let owner = owner.try_into().map_err(|_| create_err())?;
-        let name = name.try_into().map_err(|_| create_err())?;
-
-        Ok(SyncEntry {
-            repo: Repo::new(owner, name),
-        })
+        Ok(SyncEntry { repo })
     }
-}
-
-// Reject path traversal and characters that could produce unsafe checkout paths.
-fn is_safe_path_component(value: &str) -> bool {
-    !matches!(value, "" | "." | "..")
-        && value
-            .bytes()
-            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.'))
 }
 
 #[cfg(test)]

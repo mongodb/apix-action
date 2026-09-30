@@ -8,7 +8,9 @@ use tracing_subscriber::EnvFilter;
 use crate::args::{Args, Command};
 
 mod args;
+mod installation;
 mod labels;
+mod local_refs;
 mod prs;
 mod scan;
 mod shared;
@@ -33,12 +35,13 @@ async fn main() -> Result<()> {
 
     match args.command {
         Some(Command::Owners) => {
-            let owners = scan::scan(workflows_directory)
-                .await?
-                .into_iter()
-                .flat_map(|workflow| workflow.sync.into_iter().map(|repository| repository.owner))
-                .map(|owner| owner.to_string())
-                .collect::<std::collections::BTreeSet<_>>();
+            // Listing installations covers owners whose workflows are all retired, which
+            // the sync headers no longer mention.
+            let app_id = args.app_id.context("app ID is required to list owners")?;
+            let private_key = args
+                .private_key
+                .context("app private key is required to list owners")?;
+            let owners = installation::owners(app_id, &private_key).await?;
             println!("{}", serde_json::to_string(&owners)?);
             return Ok(());
         }
@@ -53,8 +56,26 @@ async fn main() -> Result<()> {
     info!(directory = %workflows_directory.display(), "scanning workflows");
 
     let owner = args.owner.as_deref();
-    let workflows = scan::scan(workflows_directory)
-        .await?
+
+    // Local `./` references resolve against the checkout root, and only here. Rewrite them
+    // to permalinks so target repositories call back into this repository.
+    let source_root = env::current_dir().context("reading working directory")?;
+    let rewriter = local_refs::Rewriter::new(
+        args.source_repository.clone(),
+        source_root.clone(),
+        local_refs::head_sha(&source_root)?,
+    );
+
+    let scanned = scan::scan(workflows_directory, &rewriter).await?;
+    // Checked before the owner filter below. An owner with no workflows left is
+    // legitimate: everything it had was retired, and its copies should be swept. A source
+    // tree with none is indistinguishable from a wrong WORKFLOW_DIRECTORY, and sweeping on
+    // that would wipe every synced workflow.
+    if scanned.is_empty() {
+        anyhow::bail!("no syncable workflows found, refusing to sync");
+    }
+
+    let workflows = scanned
         .into_iter()
         .filter_map(|mut workflow| {
             if let Some(owner) = owner {
@@ -67,13 +88,21 @@ async fn main() -> Result<()> {
         .collect::<Vec<_>>();
     info!(workflows = workflows.len(), "found syncable workflows");
 
-    let targets_directory = env::current_dir()
-        .context("reading working directory")?
-        .join("targets");
+    let targets_directory = source_root.join("targets");
+
+    let token = args.token.context("GitHub token is required for sync")?;
+
+    let repositories = installation::repositories_to_sync(&token, owner, &workflows).await?;
+    info!(repositories = repositories.len(), "repositories to sync");
 
     // Check out all target repositories and write their applicable workflows.
-    let token = args.token.context("GitHub token is required for sync")?;
-    sync::sync(&workflows, targets_directory.clone(), token.clone()).await?;
+    sync::sync(
+        &workflows,
+        &repositories,
+        targets_directory.clone(),
+        token.clone(),
+    )
+    .await?;
     info!("sync complete");
 
     // Ensure every target has `apix-action`, which the PR phase uses to find old generated PRs.
@@ -81,7 +110,7 @@ async fn main() -> Result<()> {
     info!("labels are present in all repositories");
 
     // Only create pull requests for repositories whose working tree changed.
-    let repositories_needing_pr = sync::repositories_needing_pr(&workflows, &targets_directory)?;
+    let repositories_needing_pr = sync::repositories_needing_pr(&repositories, &targets_directory)?;
     let repositories = repositories_needing_pr
         .iter()
         .map(|repository| format!("{}/{}", repository.owner, repository.repository))
