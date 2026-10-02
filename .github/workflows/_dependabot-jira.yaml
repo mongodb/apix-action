@@ -87,71 +87,25 @@ jobs:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: gh pr edit "${{ github.event.pull_request.html_url }}" --add-label "auto_close_jira"
       # A repository opts in by adding `.github/dependabot-post-update.sh`. The script only
-      # edits files; staging, the commit message, and the signed commit are handled below.
+      # edits files; the action stages the result and creates the signed commit.
       - name: Checkout PR branch
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ github.event.pull_request.head.ref }}
           token: ${{ steps.app-token.outputs.token }}
       - name: Run repo post-update task
+        id: post-update
         if: hashFiles('.github/dependabot-post-update.sh') != ''
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          BRANCH: ${{ github.event.pull_request.head.ref }}
-          HEAD_OID: ${{ github.event.pull_request.head.sha }}
-          MESSAGE: "${{ vars.DEPENDABOT_COMMIT_MESSAGE || 'chore: regenerate derived files' }}"
-          PR_TITLE: ${{ github.event.pull_request.title }}
-        run: |
-          bash .github/dependabot-post-update.sh
-          git add -A
-          if git diff --cached --quiet HEAD; then
-            echo "No changes to commit"
-            exit 0
-          fi
-
-          # createCommitOnBranch only takes whole-file changes: additions carry base64
-          # contents, deletions just a path. --no-renames keeps a rename as a delete + add.
-          additions='[]'
-          deletions='[]'
-          while IFS=$'\t' read -r change path; do
-            if [ "${change:0:1}" = "D" ]; then
-              deletions=$(jq -c --arg path "$path" '. + [{path: $path}]' <<<"$deletions")
-            else
-              contents=$(base64 -w0 -- "$path")
-              additions=$(jq -c --arg path "$path" --arg contents "$contents" \
-                '. + [{path: $path, contents: $contents}]' <<<"$additions")
-            fi
-          done < <(git diff --cached --name-status --no-renames HEAD)
-
-          query='
-          mutation ($repository: String!, $branch: String!, $expectedHeadOid: GitObjectID!, $message: String!, $body: String, $additions: [FileAddition!]!, $deletions: [FileDeletion!]!) {
-            createCommitOnBranch(input: {
-              branch: {repositoryNameWithOwner: $repository, branchName: $branch},
-              expectedHeadOid: $expectedHeadOid,
-              message: {headline: $message, body: $body},
-              fileChanges: {additions: $additions, deletions: $deletions}
-            }) {
-              commit { oid signature { wasSignedByGitHub } }
-            }
-          }'
-          payload=$(jq -n \
-            --arg query "$query" \
-            --arg repository "$GITHUB_REPOSITORY" \
-            --arg branch "$BRANCH" \
-            --arg expectedHeadOid "$HEAD_OID" \
-            --arg message "$MESSAGE" \
-            --arg body "Regenerated derived files after: $PR_TITLE" \
-            --argjson additions "$additions" \
-            --argjson deletions "$deletions" \
-            '{query: $query, variables: {repository: $repository, branch: $branch, expectedHeadOid: $expectedHeadOid, message: $message, body: $body, additions: $additions, deletions: $deletions}}')
-
-          response=$(gh api graphql --input - <<<"$payload")
-          # A commit GitHub did not sign would show up as unverified, which defeats the purpose.
-          if [ "$(jq -r '.data.createCommitOnBranch.commit.signature.wasSignedByGitHub // false' <<<"$response")" != "true" ]; then
-            echo "$response" >&2
-            echo "Commit was not signed by GitHub" >&2
-            exit 1
-          fi
+        run: bash .github/dependabot-post-update.sh
+      - name: Commit post-update changes
+        if: steps.post-update.outcome == 'success'
+        uses: ./commit-changes
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          message: "${{ vars.DEPENDABOT_COMMIT_MESSAGE || 'chore: regenerate derived files' }}"
+          body: "Regenerated derived files after: ${{ github.event.pull_request.title }}"
       - name: Approve PR
         if: vars.DEPENDABOT_AUTO_APPROVE == 'true'
         env:

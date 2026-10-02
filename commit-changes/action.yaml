@@ -1,0 +1,90 @@
+name: 'Commit changes'
+description: 'Stage the working tree and commit it through the GitHub API so GitHub signs the commit.'
+inputs:
+  message:
+    description: 'Commit headline'
+    required: true
+  body:
+    description: 'Commit body'
+    required: false
+    default: ''
+  token:
+    description: 'Token with contents:write on the checked-out repository'
+    required: true
+outputs:
+  oid:
+    description: 'OID of the created commit, empty when there was nothing to commit'
+    value: ${{ steps.commit.outputs.oid }}
+runs:
+  using: "composite"
+  steps:
+    - id: commit
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        MESSAGE: ${{ inputs.message }}
+        BODY: ${{ inputs.body }}
+      run: |
+        set -euo pipefail
+
+        # createCommitOnBranch needs a branch name, so a detached HEAD cannot be committed.
+        branch=$(git rev-parse --abbrev-ref HEAD)
+        if [ "$branch" = "HEAD" ]; then
+          echo "Cannot commit from a detached HEAD; check out a branch first" >&2
+          exit 1
+        fi
+
+        git add -A
+        if git diff --cached --quiet HEAD; then
+          echo "No changes to commit"
+          exit 0
+        fi
+
+        # createCommitOnBranch only takes whole-file changes: additions carry base64
+        # contents, deletions just a path. --no-renames keeps a rename as a delete + add.
+        additions='[]'
+        deletions='[]'
+        while IFS=$'\t' read -r change path; do
+          if [ "${change:0:1}" = "D" ]; then
+            deletions=$(jq -c --arg path "$path" '. + [{path: $path}]' <<<"$deletions")
+          else
+            contents=$(base64 -w0 -- "$path")
+            additions=$(jq -c --arg path "$path" --arg contents "$contents" \
+              '. + [{path: $path, contents: $contents}]' <<<"$additions")
+          fi
+        done < <(git diff --cached --name-status --no-renames HEAD)
+
+        # Commits created through this mutation are signed by GitHub, so they show up as verified.
+        query='
+        mutation ($repository: String!, $branch: String!, $expectedHeadOid: GitObjectID!, $message: String!, $body: String, $additions: [FileAddition!]!, $deletions: [FileDeletion!]!) {
+          createCommitOnBranch(input: {
+            branch: {repositoryNameWithOwner: $repository, branchName: $branch},
+            expectedHeadOid: $expectedHeadOid,
+            message: {headline: $message, body: $body},
+            fileChanges: {additions: $additions, deletions: $deletions}
+          }) {
+            commit { oid signature { wasSignedByGitHub } }
+          }
+        }'
+        payload=$(jq -n \
+          --arg query "$query" \
+          --arg repository "$GITHUB_REPOSITORY" \
+          --arg branch "$branch" \
+          --arg expectedHeadOid "$(git rev-parse HEAD)" \
+          --arg message "$MESSAGE" \
+          --arg body "$BODY" \
+          --argjson additions "$additions" \
+          --argjson deletions "$deletions" \
+          '{query: $query, variables: {repository: $repository, branch: $branch, expectedHeadOid: $expectedHeadOid, message: $message, body: $body, additions: $additions, deletions: $deletions}}')
+
+        response=$(gh api graphql --input - <<<"$payload")
+        oid=$(jq -r '.data.createCommitOnBranch.commit.oid // empty' <<<"$response")
+        # A commit GitHub did not sign would show up as unverified, which defeats the purpose.
+        if [ "$(jq -r '.data.createCommitOnBranch.commit.signature.wasSignedByGitHub // false' <<<"$response")" != "true" ]; then
+          echo "$response" >&2
+          echo "Commit was not signed by GitHub" >&2
+          exit 1
+        fi
+
+        echo "oid=$oid" >> "$GITHUB_OUTPUT"
+        echo "Created signed commit $oid on $branch"
