@@ -8,6 +8,10 @@ inputs:
     description: 'Commit body'
     required: false
     default: ''
+  paths:
+    description: 'Space-separated paths to stage, defaulting to the whole working tree'
+    required: false
+    default: '.'
   token:
     description: 'Token with contents:write on the checked-out repository'
     required: true
@@ -24,6 +28,7 @@ runs:
         GH_TOKEN: ${{ inputs.token }}
         MESSAGE: ${{ inputs.message }}
         BODY: ${{ inputs.body }}
+        PATHS: ${{ inputs.paths }}
       run: |
         set -euo pipefail
 
@@ -34,7 +39,9 @@ runs:
           exit 1
         fi
 
-        git add -A
+        # PATHS is space-separated on purpose so callers can scope the commit to a few directories.
+        read -ra paths <<<"$PATHS"
+        git add -A -- "${paths[@]}"
         if git diff --cached --quiet HEAD; then
           echo "No changes to commit"
           exit 0

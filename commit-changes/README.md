@@ -6,7 +6,8 @@ identity or signing setup is needed in the caller.
 
 The repository must already be checked out on a branch (not a detached HEAD) with a token
 that has `contents: write`. When there is nothing to commit, the action succeeds with an
-empty `oid` output.
+empty `oid` output. `paths` scopes the commit to specific paths and defaults to the whole
+working tree.
 
 ```yaml
 - uses: actions/checkout@<sha> # v7
@@ -18,4 +19,5 @@ empty `oid` output.
     token: ${{ steps.app-token.outputs.token }}
     message: chore: regenerate derived files
     body: Regenerated after ${{ github.event.pull_request.title }}
+    paths: dist generated
 ```
