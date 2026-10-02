@@ -39,3 +39,19 @@ Only files carrying the generated `# synced from apix-actions/...` marker are re
 The owner matrix is built by listing the app's installations, so an owner is swept even once all of its workflows are retired.
 
 A run that finds no syncable workflows at all refuses to sync, so a misconfigured workflow directory cannot be mistaken for "everything retired".
+
+# Dependabot post-update task
+
+`_dependabot-jira.yaml` runs a repository's `.github/dependabot-post-update.sh` (when present)
+before approving or merging a Dependabot PR. The script is repository-owned, so sync never
+writes or removes it; repositories without the file skip the step.
+
+The script only edits files in the checked-out PR branch — no git commands. The workflow stages
+the result, writes the commit message, and creates the commit through the GitHub API
+(`createCommitOnBranch`), so GitHub signs it and it shows as Verified.
+
+Two repository variables (Settings → Variables) configure it:
+
+- `DEPENDABOT_COMMIT_MESSAGE` — commit headline; defaults to `chore: regenerate derived files`.
+- `DEPENDABOT_AUTO_APPROVE` — set to `true` to approve and enable auto-merge; defaults to off,
+  leaving the PR for human review.
