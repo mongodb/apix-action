@@ -46,6 +46,14 @@ A run that finds no syncable workflows at all refuses to sync, so a misconfigure
 before approving or merging a Dependabot PR. The script is repository-owned, so sync never
 writes or removes it; repositories without the file skip the step.
 
+The caller triggers on `opened` and `synchronize`, so a Dependabot rebase or recreate
+regenerates the derived files too. Three guards make the re-runs safe: the job's
+`github.actor == 'dependabot[bot]'` condition ignores the post-update commit's own push; the
+ticket, comment, and `auto_close_jira` label steps are skipped once the PR already carries that
+label, so no duplicate tickets are filed; and every commit in the PR must be authored by
+`dependabot[bot]` or by this app's own bot, so a write-access user cannot smuggle a commit onto
+a Dependabot branch and have it auto-merged and executed.
+
 The script only edits files in the checked-out PR branch — no git commands. The workflow stages
 the result, writes the commit message, and creates the commit through the GitHub API
 (`createCommitOnBranch`), so GitHub signs it and it shows as Verified.

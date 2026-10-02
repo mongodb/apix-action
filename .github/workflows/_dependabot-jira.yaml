@@ -41,7 +41,10 @@ jobs:
               echo "fix-version=Not Applicable" >> "$GITHUB_OUTPUT"
               ;;
           esac
+      # Re-runs (Dependabot rebase/recreate) must not file a second ticket, so the
+      # ticket steps only run while the PR is still missing the marker label.
       - name: Create Jira ticket
+        if: ${{ !contains(github.event.pull_request.labels.*.name, 'auto_close_jira') }}
         uses: mongodb/apix-action/create-jira@f7d2400a387dea2661651b14bbaf8c8f46c8bf66 # v16
         id: create
         with:
@@ -74,6 +77,7 @@ jobs:
           app-id: ${{ steps.load-secrets.outputs.APP_ID }}
           private-key: ${{ steps.decode-app-secret.outputs.APP_PEM }}
       - name: Add comment
+        if: ${{ !contains(github.event.pull_request.labels.*.name, 'auto_close_jira') }}
         uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9 # v5
         with:
           token: ${{ steps.app-token.outputs.token }}
@@ -83,9 +87,30 @@ jobs:
 
             Note: Jira ticket will be closed automatically when this PR is merged.
       - name: Add auto_close_jira label
+        if: ${{ !contains(github.event.pull_request.labels.*.name, 'auto_close_jira') }}
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: gh pr edit "${{ github.event.pull_request.html_url }}" --add-label "auto_close_jira"
+      # Anyone with write access can push onto a Dependabot branch. A later Dependabot
+      # rebase makes the run attributable to dependabot[bot], which would otherwise
+      # auto-merge their commit and execute the branch's post-update script with the app
+      # token. Only Dependabot's commits and the ones this workflow creates are allowed.
+      - name: Verify commits are Dependabot's
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+          BOT: ${{ steps.app-token.outputs.user-name }}
+        run: |
+          while IFS= read -r author; do
+            case "$author" in
+              "dependabot[bot]"|"$BOT") ;;
+              *)
+                echo "::error::Refusing to run: commit authored by $author"
+                exit 1
+                ;;
+            esac
+          done < <(gh pr view "$PR" --repo "$REPO" --json commits --jq '[.commits[].authors[].login] | unique | .[]')
       # A repository opts in by adding `.github/dependabot-post-update.sh`. The script only
       # edits files; the action stages the result and creates the signed commit.
       - name: Checkout PR branch
