@@ -8,7 +8,10 @@ name: Dependabot PR automation
 
 on:
   pull_request:
-    types: [opened]
+    # `synchronize` covers Dependabot rebases and recreates, which rewrite the PR
+    # branch without opening a new PR. The job's actor guard keeps the workflow's
+    # own post-update commit from re-triggering it.
+    types: [opened, synchronize]
 
 permissions: {}
 
