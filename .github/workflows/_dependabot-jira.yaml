@@ -111,8 +111,7 @@ jobs:
                 ;;
             esac
           done < <(gh pr view "$PR" --repo "$REPO" --json commits --jq '[.commits[].authors[].login] | unique | .[]')
-      # A repository opts in by adding `.github/dependabot-post-update.sh`. The script only
-      # edits files; the action stages the result and creates the signed commit.
+      # Opt-in: the repository owns `.github/dependabot-post-update.sh`; the action commits its result.
       - name: Checkout PR branch
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -127,8 +126,7 @@ jobs:
       - name: Commit post-update changes
         id: commit
         if: steps.post-update.outcome == 'success'
-        # A local `./` reference resolves against the caller's workspace, not this repository,
-        # so a reusable workflow must pin its own actions by permalink.
+        # `./` resolves against the caller's workspace, so pin by permalink.
         uses: mongodb/apix-action/commit-changes@b9d203ba30a17b2cae54f9bb2265b4142af38fec
         with:
           token: ${{ steps.app-token.outputs.token }}
@@ -142,9 +140,7 @@ jobs:
           REPO: ${{ github.repository }}
           OID: ${{ steps.commit.outputs.oid }}
         run: |
-          # Anchor the approval to the commit this run created. Without it the review attaches
-          # to whichever head the API still reports, which can be the previous commit; branch
-          # protection then dismisses the review as stale and the auto-merge never completes.
+          # Anchor to our commit, else the review lands on the previous head and is dismissed as stale.
           if [ -n "$OID" ]; then
             gh api "repos/$REPO/pulls/$PR/reviews" -f event=APPROVE -f commit_id="$OID"
           else
