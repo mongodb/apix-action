@@ -28,6 +28,11 @@ branch.
 A `./` reference that does not exist fails the run rather than shipping a broken `uses:`,
 since the unrewritten form would resolve against the target repository.
 
+A reusable workflow (`_*.yaml`) is not copied into targets — the synced caller reaches it by
+permalink. GitHub resolves `./` inside it against the caller's workspace, so a reusable
+workflow cannot use `./` at all and must pin this repository's own actions by permalink, as
+`_dependabot-jira.yaml` does for `commit-changes`.
+
 ## Removing a workflow from a target
 
 Remove the `# sync -> owner/repository` header to stop syncing to that target, or delete the workflow entirely to retire it everywhere. The next sync run deletes the copy from each affected repository and lists it under `Actions removed` in the generated PR.
