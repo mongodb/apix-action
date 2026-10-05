@@ -32,14 +32,12 @@ runs:
       run: |
         set -euo pipefail
 
-        # createCommitOnBranch needs a branch name, so a detached HEAD cannot be committed.
         branch=$(git rev-parse --abbrev-ref HEAD)
         if [ "$branch" = "HEAD" ]; then
           echo "Cannot commit from a detached HEAD; check out a branch first" >&2
           exit 1
         fi
 
-        # PATHS is space-separated on purpose so callers can scope the commit to a few directories.
         read -ra paths <<<"$PATHS"
         git add -A -- "${paths[@]}"
         if git diff --cached --quiet HEAD; then
@@ -47,8 +45,7 @@ runs:
           exit 0
         fi
 
-        # createCommitOnBranch only takes whole-file changes: additions carry base64
-        # contents, deletions just a path. --no-renames keeps a rename as a delete + add.
+        # additions carry base64 contents, deletions just a path; --no-renames splits a rename
         additions='[]'
         deletions='[]'
         while IFS=$'\t' read -r change path; do
@@ -61,7 +58,7 @@ runs:
           fi
         done < <(git diff --cached --name-status --no-renames HEAD)
 
-        # Commits created through this mutation are signed by GitHub, so they show up as verified.
+        # GitHub signs commits created through this mutation, so they show up as verified.
         query='
         mutation ($repository: String!, $branch: String!, $expectedHeadOid: GitObjectID!, $message: String!, $body: String, $additions: [FileAddition!]!, $deletions: [FileDeletion!]!) {
           createCommitOnBranch(input: {
@@ -86,7 +83,6 @@ runs:
 
         response=$(gh api graphql --input - <<<"$payload")
         oid=$(jq -r '.data.createCommitOnBranch.commit.oid // empty' <<<"$response")
-        # A commit GitHub did not sign would show up as unverified, which defeats the purpose.
         if [ "$(jq -r '.data.createCommitOnBranch.commit.signature.wasSignedByGitHub // false' <<<"$response")" != "true" ]; then
           echo "$response" >&2
           echo "Commit was not signed by GitHub" >&2
