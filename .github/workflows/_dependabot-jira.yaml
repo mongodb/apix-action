@@ -94,32 +94,39 @@ jobs:
       # Anyone with write access can push onto a Dependabot branch. A later Dependabot
       # rebase makes the run attributable to dependabot[bot], which would otherwise
       # auto-merge their commit and execute the branch's post-update script with the app
-      # token. Only Dependabot's commits and the ones this workflow creates are allowed.
-      - name: Verify commits are Dependabot's
+      # token. Only commits authored by Dependabot or this app and signed by GitHub are allowed.
+      - name: Verify commits are Dependabot's and verified
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           PR: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
           BOT: ${{ steps.app-token.outputs.user-name }}
         run: |
-          while IFS= read -r author; do
+          while IFS=$'\t' read -r verified author sha; do
             case "$author" in
               "dependabot[bot]"|"$BOT") ;;
               *)
-                echo "::error::Refusing to run: commit authored by $author"
+                echo "::error::Refusing to run: $sha authored by $author"
                 exit 1
                 ;;
             esac
-          done < <(gh pr view "$PR" --repo "$REPO" --json commits --jq '[.commits[].authors[].login] | unique | .[]')
+            if [ "$verified" != "true" ]; then
+              echo "::error::Refusing to run: $sha is not verified"
+              exit 1
+            fi
+          done < <(gh api "repos/$REPO/pulls/$PR/commits" --paginate \
+            --jq '.[] | "\(.commit.verification.verified)\t\(.author.login // "unknown")\t\(.sha)"')
       # Opt-in: the repository owns `.github/dependabot-post-update.sh`; the action commits its result.
       - name: Checkout PR branch
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ github.event.pull_request.head.ref }}
           token: ${{ steps.app-token.outputs.token }}
+      # Only Dependabot's own runs regenerate, so the run this commit triggers skips straight
+      # to approving once the PR head has caught up with it.
       - name: Run repo post-update task
         id: post-update
-        if: hashFiles('.github/dependabot-post-update.sh') != ''
+        if: github.actor == 'dependabot[bot]' && hashFiles('.github/dependabot-post-update.sh') != ''
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: bash .github/dependabot-post-update.sh
@@ -132,22 +139,20 @@ jobs:
           token: ${{ steps.app-token.outputs.token }}
           message: "${{ vars.DEPENDABOT_COMMIT_MESSAGE || 'chore: regenerate derived files' }}"
           body: "Regenerated derived files after: ${{ github.event.pull_request.title }}"
+      # A run that pushed a commit leaves approving to the run that commit triggers: approving
+      # here would attach to the previous head and be dismissed as stale.
       - name: Approve PR
-        if: vars.DEPENDABOT_AUTO_APPROVE == 'true'
+        if: vars.DEPENDABOT_AUTO_APPROVE == 'true' && steps.commit.outputs.oid == ''
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          PR: ${{ github.event.pull_request.number }}
-          REPO: ${{ github.repository }}
-          OID: ${{ steps.commit.outputs.oid }}
-        run: |
-          # Anchor to our commit, else the review lands on the previous head and is dismissed as stale.
-          if [ -n "$OID" ]; then
-            gh api "repos/$REPO/pulls/$PR/reviews" -f event=APPROVE -f commit_id="$OID"
-          else
-            gh pr review "${{ github.event.pull_request.html_url }}" --approve
-          fi
+        run: gh pr review "${{ github.event.pull_request.html_url }}" --approve
       - name: Auto merge PR
         if: vars.DEPENDABOT_AUTO_APPROVE == 'true'
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
-        run: gh pr merge "${{ github.event.pull_request.html_url }}" --auto --squash
+          URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          # Both runs reach here; arming auto-merge twice errors once it is already enabled.
+          if [ -z "$(gh pr view "$URL" --json autoMergeRequest --jq '.autoMergeRequest.enabledAt // empty')" ]; then
+            gh pr merge "$URL" --auto --squash
+          fi
