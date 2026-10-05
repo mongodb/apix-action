@@ -126,7 +126,9 @@ jobs:
         run: bash .github/dependabot-post-update.sh
       - name: Commit post-update changes
         if: steps.post-update.outcome == 'success'
-        uses: ./commit-changes
+        # A local `./` reference resolves against the caller's workspace, not this repository,
+        # so a reusable workflow must pin its own actions by permalink.
+        uses: mongodb/apix-action/commit-changes@b9d203ba30a17b2cae54f9bb2265b4142af38fec
         with:
           token: ${{ steps.app-token.outputs.token }}
           message: "${{ vars.DEPENDABOT_COMMIT_MESSAGE || 'chore: regenerate derived files' }}"
