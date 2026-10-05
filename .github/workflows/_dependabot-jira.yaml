@@ -131,6 +131,7 @@ jobs:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: bash .github/dependabot-post-update.sh
       - name: Commit post-update changes
+        id: commit
         if: steps.post-update.outcome == 'success'
         # `./` resolves against the caller's workspace, so pin by permalink.
         uses: mongodb/apix-action/commit-changes@b9d203ba30a17b2cae54f9bb2265b4142af38fec
@@ -138,8 +139,10 @@ jobs:
           token: ${{ steps.app-token.outputs.token }}
           message: "${{ vars.DEPENDABOT_COMMIT_MESSAGE || 'chore: regenerate derived files' }}"
           body: "Regenerated derived files after: ${{ github.event.pull_request.title }}"
+      # A run that pushed a commit leaves approving to the run that commit triggers: approving
+      # here would attach to the previous head and be dismissed as stale.
       - name: Approve PR
-        if: vars.DEPENDABOT_AUTO_APPROVE == 'true'
+        if: vars.DEPENDABOT_AUTO_APPROVE == 'true' && steps.commit.outputs.oid == ''
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: gh pr review "${{ github.event.pull_request.html_url }}" --approve
@@ -147,4 +150,9 @@ jobs:
         if: vars.DEPENDABOT_AUTO_APPROVE == 'true'
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
-        run: gh pr merge "${{ github.event.pull_request.html_url }}" --auto --squash
+          URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          # Both runs reach here; arming auto-merge twice errors once it is already enabled.
+          if [ -z "$(gh pr view "$URL" --json autoMergeRequest --jq '.autoMergeRequest.enabledAt // empty')" ]; then
+            gh pr merge "$URL" --auto --squash
+          fi
