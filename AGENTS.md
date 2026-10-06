@@ -67,8 +67,14 @@ The script only edits files in the checked-out PR branch — no git commands. Th
 the result, writes the commit message, and creates the commit through the GitHub API
 (`createCommitOnBranch`), so GitHub signs it and it shows as Verified.
 
+Merging waits for the required status checks and then merges directly, rather than arming
+auto-merge. Auto-merge also waits on the code-owner review, which the app bypasses through the
+ruleset's bypass list but auto-merge does not honour, so a repository with
+`require_code_owner_review` would never merge. The app performs the merge itself so its bypass
+applies, and the checks are still enforced because the workflow waits for them first.
+
 Two repository variables (Settings → Variables) configure it:
 
 - `DEPENDABOT_COMMIT_MESSAGE` — commit headline; defaults to `chore: regenerate derived files`.
-- `DEPENDABOT_AUTO_APPROVE` — set to `true` to approve and enable auto-merge; defaults to off,
-  leaving the PR for human review.
+- `DEPENDABOT_AUTO_APPROVE` — set to `true` to approve and merge once the required checks pass;
+  defaults to off, leaving the PR for human review.

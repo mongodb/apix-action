@@ -146,13 +146,25 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: gh pr review "${{ github.event.pull_request.html_url }}" --approve
-      - name: Auto merge PR
-        if: vars.DEPENDABOT_AUTO_APPROVE == 'true'
+      - name: Merge PR
+        if: vars.DEPENDABOT_AUTO_APPROVE == 'true' && steps.commit.outputs.oid == ''
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           URL: ${{ github.event.pull_request.html_url }}
         run: |
-          # Both runs reach here; arming auto-merge twice errors once it is already enabled.
-          if [ -z "$(gh pr view "$URL" --json autoMergeRequest --jq '.autoMergeRequest.enabledAt // empty')" ]; then
-            gh pr merge "$URL" --auto --squash
-          fi
+          # Auto-merge would also wait on the code-owner review, which this app bypasses but
+          # auto-merge does not. Wait for the required checks ourselves, then merge directly
+          # so the app performs the merge and its ruleset bypass applies.
+          [ "$(gh pr view "$URL" --json state --jq .state)" = "OPEN" ] || exit 0
+          # Required checks are invisible until their workflow starts, so wait for them to
+          # appear first; otherwise --watch reports success over an empty list and merges.
+          for _ in $(seq 1 30); do
+            [ "$(gh pr checks "$URL" --required --json name --jq length)" -gt 0 ] && break
+            sleep 10
+          done
+          [ "$(gh pr checks "$URL" --required --json name --jq length)" -gt 0 ] || {
+            echo "::error::No required checks reported for $URL" >&2
+            exit 1
+          }
+          gh pr checks "$URL" --required --watch --fail-fast
+          gh pr merge "$URL" --squash
