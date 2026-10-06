@@ -16,8 +16,9 @@ permissions: {}
 
 jobs:
   dependabot:
-    # apix-bot's own post-update commit re-triggers this, and that run is the one that
-    # approves: by then the PR head has caught up with the commit it just pushed.
-    if: github.actor == 'dependabot[bot]' || github.actor == 'apix-bot[bot]'
+    # Keyed on the PR author, not the actor: apix-bot's own post-update commit re-triggers
+    # this workflow, and that run is the one that approves. The author stays dependabot[bot],
+    # so this ignores the sync PRs apix-bot opens, which an actor check would match.
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
     uses: ./.github/workflows/_dependabot-jira.yaml
     secrets: inherit

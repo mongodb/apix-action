@@ -52,11 +52,13 @@ before approving or merging a Dependabot PR. The script is repository-owned, so 
 writes or removes it; repositories without the file skip the step.
 
 The caller triggers on `opened` and `synchronize`, so a Dependabot rebase or recreate
-regenerates the derived files too. The job accepts `dependabot[bot]` and this app's own bot:
-the run the post-update commit triggers is the one that approves, because only by then has the
-PR head caught up with the commit that was just pushed. The script itself still runs only for
-`dependabot[bot]`, so that follow-up run does not regenerate a second time, and a run that
-pushed a commit skips approving so that only the settled head is approved. Two further guards
+regenerates the derived files too. The job keys on the PR author being `dependabot[bot]`, not on
+the actor: the run this app's own post-update commit triggers must still qualify, but the sync
+pull requests the app opens must not, and an actor check cannot tell those apart. That
+follow-up run is the one that approves, because only by then has the PR head caught up with the
+commit that was just pushed. The script itself still runs only for `dependabot[bot]`, so that
+follow-up run does not regenerate a second time, and a run that pushed a commit skips approving
+so that only the settled head is approved. Two further guards
 make the re-runs safe: the ticket, comment, and `auto_close_jira` label steps are skipped once
 the PR already carries that label, so no duplicate tickets are filed; and every commit in the
 PR must be authored by `dependabot[bot]` or by this app's own bot and signed by GitHub, so a
