@@ -1,0 +1,50 @@
+name: 'Link Jira Issues'
+description: 'Create a link between two Jira issues'
+inputs:
+  token:
+    description: "Token to connect to Jira"
+    required: true
+  inward-issue:
+    description: "Inward issue key (the issue on the inward side of the link type)"
+    required: true
+  outward-issue:
+    description: "Outward issue key (the issue on the outward side of the link type)"
+    required: true
+  link-type:
+    description: "Link type name, e.g. 'related to', 'Blocks', 'Duplicate'"
+    default: "related to"
+  comment:
+    description: "Optional comment to attach to the link"
+  api-base:
+    description: "Base URL for the Jira API"
+    default: "https://jira.mongodb.org"
+runs:
+  using: "composite"
+  steps:
+    - shell: bash
+      env:
+        JIRA_API_BASE: ${{ inputs.api-base }}
+        JIRA_API_TOKEN: ${{ inputs.token }}
+        INWARD_ISSUE: ${{ inputs.inward-issue }}
+        OUTWARD_ISSUE: ${{ inputs.outward-issue }}
+        LINK_TYPE: ${{ inputs.link-type }}
+        COMMENT: ${{ inputs.comment }}
+      run: |
+        set -Eeou pipefail
+
+        request=$(jq -n \
+          --arg type "${LINK_TYPE}" \
+          --arg inward "${INWARD_ISSUE}" \
+          --arg outward "${OUTWARD_ISSUE}" \
+          '{type: {name: $type}, inwardIssue: {key: $inward}, outwardIssue: {key: $outward}}')
+
+        if [[ -n "${COMMENT}" ]]; then
+          request=$(echo "${request}" | jq --arg body "${COMMENT}" '. + {comment: {body: $body}}')
+        fi
+
+        curl --fail --silent --request POST \
+          --url "${JIRA_API_BASE}/rest/api/2/issueLink" \
+          --header 'Authorization: Bearer '"${JIRA_API_TOKEN}" \
+          --header 'Accept: application/json' \
+          --header 'Content-Type: application/json' \
+          --data "$request"

@@ -9,6 +9,10 @@ A collection of reusable GitHub Actions for integrating with Jira and other comm
 - **[create-jira](./create-jira/README.md)**: Create a Jira issue with customizable fields
 - **[find-jira](./find-jira/README.md)**: Find Jira issues using JQL queries
 - **[transition-jira](./transition-jira/README.md)**: Transition Jira issues between states
+- **[comment-jira](./comment-jira/README.md)**: Add a comment to a Jira issue
+- **[create-version](./create-version/README.md)**: Create a Jira project version (fix version)
+- **[update-version](./update-version/README.md)**: Update a Jira project version (rename/release)
+- **[link-issues](./link-issues/README.md)**: Link two Jira issues
 
 ### GitHub Integration
 

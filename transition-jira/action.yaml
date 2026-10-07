@@ -8,8 +8,9 @@ inputs:
     description: "Issue Key"
     required: true
   transition-id:
-    description: "Id of Transition"
-    required: true
+    description: "Id of Transition. Either transition-id or transition-name must be provided."
+  transition-name:
+    description: "Name of the Transition (resolved to an id at runtime). Either transition-id or transition-name must be provided."
   resolution:
     description: "Resolution of Transition"
   api-base:
@@ -24,11 +25,27 @@ runs:
         JIRA_API_TOKEN: ${{ inputs.token }}
         ISSUE_KEY: ${{ inputs.issue-key }}
         TRANSITION_ID: ${{ inputs.transition-id }}
+        TRANSITION_NAME: ${{ inputs.transition-name }}
         RESOLUTION: ${{ inputs.resolution }}
       run: |
+        set -Eeou pipefail
+
+        if [[ -z "${TRANSITION_ID}" && -n "${TRANSITION_NAME}" ]]; then
+          TRANSITION_ID=$(curl --fail --silent \
+            --url "${JIRA_API_BASE}/rest/api/2/issue/${ISSUE_KEY}/transitions" \
+            --header 'Authorization: Bearer '"${JIRA_API_TOKEN}" \
+            --header 'Accept: application/json' \
+            | jq -r --arg name "${TRANSITION_NAME}" '.transitions[] | select(.name == $name) | .id')
+        fi
+
+        if [[ -z "${TRANSITION_ID}" ]]; then
+          echo "Could not resolve a transition (id='${TRANSITION_ID:-}', name='${TRANSITION_NAME:-}') for ${ISSUE_KEY}" >&2
+          exit 1
+        fi
+
         request=$(jq -n --arg transition_id "$TRANSITION_ID" '{"transition":{"id":$transition_id}}')
         if [[ -n "$RESOLUTION" ]]; then
-          request=$(echo $request | jq --arg resolution "$RESOLUTION" '[.,{fields:{resolution:{name:$resolution}}}] | add')
+          request=$(echo "$request" | jq --arg resolution "$RESOLUTION" '[.,{fields:{resolution:{name:$resolution}}}] | add')
         fi
         curl --fail --silent --request POST \
           --url "${JIRA_API_BASE}/rest/api/2/issue/$ISSUE_KEY/transitions" \

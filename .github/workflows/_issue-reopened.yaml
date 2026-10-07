@@ -32,4 +32,4 @@ jobs:
         with:
           token: ${{ steps.load-secrets.outputs.JIRA_API_TOKEN }}
           issue-key: ${{ steps.find.outputs.key }}
-          transition-id: 1351
+          transition-name: "Reopen Issue"

@@ -8,15 +8,20 @@ A GitHub Action to transition Jira issues between states.
 |------|-------------|----------|---------|
 | `token` | Token to connect to Jira | Yes | |
 | `issue-key` | Issue Key | Yes | |
-| `transition-id` | ID of the transition | Yes | |
+| `transition-id` | ID of the transition | No | |
+| `transition-name` | Name of the transition (resolved to an id at runtime) | No | |
 | `resolution` | Resolution of the transition | No | |
 | `api-base` | Base URL for the Jira API | No | `https://jira.mongodb.org` |
+
+Either `transition-id` or `transition-name` must be provided. When only
+`transition-name` is provided, the action calls
+`GET /rest/api/2/issue/{key}/transitions` and matches the transition by name.
 
 ## Example Usage
 
 ```yaml
 - name: Transition Jira Issue
-  uses: your-org/apix-action/transition-jira@v1
+  uses: mongodb/apix-action/transition-jira@v1
   with:
     token: ${{ secrets.JIRA_API_TOKEN }}
     issue-key: PROJECT-123
@@ -24,15 +29,26 @@ A GitHub Action to transition Jira issues between states.
     api-base: "https://jira.example.org"
 ```
 
+## Example by name
+
+```yaml
+- name: Start progress
+  uses: mongodb/apix-action/transition-jira@v1
+  with:
+    token: ${{ secrets.JIRA_API_TOKEN }}
+    issue-key: PROJECT-123
+    transition-name: "Start Progress"
+```
+
 ## Example with Resolution
 
 ```yaml
 - name: Resolve Jira Issue
-  uses: your-org/apix-action/transition-jira@v1
+  uses: mongodb/apix-action/transition-jira@v1
   with:
     token: ${{ secrets.JIRA_API_TOKEN }}
     issue-key: PROJECT-123
-    transition-id: '5' # ID for the "Resolve Issue" transition
+    transition-name: "Resolve Issue"
     resolution: "Done"
     api-base: "https://jira.example.org"
 ```

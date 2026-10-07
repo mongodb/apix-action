@@ -7,6 +7,11 @@ inputs:
   jql:
     description: "JQL query to run"
     required: true
+  fields:
+    description: "Comma-separated list of fields to return for each issue"
+  max-results:
+    description: "Maximum number of issues to return"
+    default: "50"
   api-base:
     description: "Base URL for the Jira API"
     default: "https://jira.mongodb.org"
@@ -17,6 +22,9 @@ outputs:
   issue-key:
     description: "key of the issue found"
     value: ${{ steps.find.outputs.KEY }}
+  issues:
+    description: "JSON array of all issues found"
+    value: ${{ steps.find.outputs.ISSUES }}
 runs:
   using: "composite"
   steps:
@@ -24,10 +32,18 @@ runs:
       shell: bash
       env:
         QUERY: ${{ inputs.jql }}
+        FIELDS: ${{ inputs.fields }}
+        MAX_RESULTS: ${{ inputs.max-results }}
       run: |
         {
           echo "REQUEST_BODY<<EOF"
-          jq -n --arg query "$QUERY" '.jql = $query'
+          if [[ -n "$FIELDS" ]]; then
+            jq -n --arg query "$QUERY" --arg fields "$FIELDS" --argjson max "$MAX_RESULTS" \
+              '{jql: $query, fields: ($fields | split(",")), maxResults: $max}'
+          else
+            jq -n --arg query "$QUERY" --argjson max "$MAX_RESULTS" \
+              '{jql: $query, maxResults: $max}'
+          fi
           echo "EOF"
         } >> "$GITHUB_OUTPUT"
     - id: find
@@ -43,5 +59,10 @@ runs:
           --header 'Accept: application/json' \
           --header 'Content-Type: application/json' \
           --data "$REQUEST_BODY")
-        echo "KEY=$(echo "${json_response}" | jq -r -c '.issues[] | .key' | head -n 1)" >> "$GITHUB_OUTPUT"
-        echo "FOUND=$(echo "${json_response}" | jq -r -c '[.issues[]] | any')" >> "$GITHUB_OUTPUT"
+        {
+          echo "ISSUES<<EOF"
+          echo "${json_response}" | jq -c '.issues'
+          echo "EOF"
+          echo "KEY=$(echo "${json_response}" | jq -r '.issues[0].key // ""')"
+          echo "FOUND=$(echo "${json_response}" | jq -r '[.issues[]] | any')"
+        } >> "$GITHUB_OUTPUT"
