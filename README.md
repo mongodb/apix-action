@@ -12,7 +12,7 @@ A collection of reusable GitHub Actions for integrating with Jira and other comm
 - **[comment-jira](./comment-jira/README.md)**: Add a comment to a Jira issue
 - **[create-version](./create-version/README.md)**: Create a Jira project version (fix version)
 - **[update-version](./update-version/README.md)**: Update a Jira project version (rename/release)
-- **[link-issues](./link-issues/README.md)**: Link two Jira issues
+- **[link-jira](./link-jira/README.md)**: Link two Jira issues
 
 ### GitHub Integration
 

@@ -17,7 +17,7 @@ A GitHub Action to create a link between two Jira issues.
 
 ```yaml
 - name: Link release and notes tickets
-  uses: mongodb/apix-action/link-issues@v1
+  uses: mongodb/apix-action/link-jira@v1
   with:
     token: ${{ secrets.JIRA_API_TOKEN }}
     inward-issue: CLOUDP-123
