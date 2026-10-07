@@ -26,14 +26,14 @@ issue key or many, so it doubles as a bulk editor. Mirrors the field inputs of
 
 ## Example Usage
 
-Move unresolved tickets to the next release (bulk):
+Bulk update multiple issues:
 
 ```yaml
-- name: Move unresolved tickets to the next release
+- name: Move tickets to the next release
   uses: mongodb/apix-action/update-jira@v1
   with:
     token: ${{ secrets.JIRA_API_TOKEN }}
-    issue-keys: ${{ steps.unresolved.outputs.issue-keys }}
+    issue-keys: CLOUDP-123,CLOUDP-456
     extra-data: '{"fixVersions":[{"name":"next-atlascli-release"}]}'
 ```
 
