@@ -6,15 +6,16 @@ Merge workflow changes to `main`, then manually run the `Sync workflows` GitHub 
 
 ## Referencing reusable workflows and actions
 
-Inside a synced workflow, reference anything from this repository by relative path:
+Inside a synced workflow, reference anything from this repository by relative path (`./`)
+or GitHub's self-repository syntax (`$/`):
 
 ```yaml
 uses: ./.github/workflows/_close-jira.yaml
 ```
 
-Do not pin `mongodb/apix-action/...@<sha>` by hand. Sync rewrites each `./` reference to a
-permalink when it writes the file into a target, pinning every reference in the run to the
-commit being synced. So the permalink always matches the content being shipped, and
+Do not pin `mongodb/apix-action/...@<sha>` by hand. Sync rewrites each `./` or `$/` reference
+to a permalink when it writes the file into a target, pinning every reference in the run to
+the commit being synced. So the permalink always matches the content being shipped, and
 dependabot has no self-reference to bump here.
 
 Because the pin is the synced commit, any run where `main` has moved rewrites every synced
@@ -25,13 +26,13 @@ Sync must be dispatched from `main`; the workflow fails otherwise. A commit on a
 never reach `main`, which would leave targets pinned to a permalink that dies with the
 branch.
 
-A `./` reference that does not exist fails the run rather than shipping a broken `uses:`,
-since the unrewritten form would resolve against the target repository.
+A `./` or `$/` reference that does not exist fails the run rather than shipping a broken
+`uses:`, since the unrewritten form would resolve against the target repository.
 
 A reusable workflow (`_*.yaml`) is not copied into targets — the synced caller reaches it by
 permalink. GitHub resolves `./` inside it against the caller's workspace, so a reusable
-workflow cannot use `./` at all and must pin this repository's own actions by permalink, as
-`_dependabot-jira.yaml` does for `commit-changes`.
+workflow cannot use `./`; use the self-repository syntax (`$/`) instead, which resolves to
+this repository at the running commit, as `_close-jira.yaml` does for `transition-jira`.
 
 ## Removing a workflow from a target
 
