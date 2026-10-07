@@ -24,7 +24,7 @@ is created.
 ```yaml
 - name: Create next fix version
   id: create_version
-  uses: mongodb/apix-action/create-version@v1
+  uses: mongodb/apix-action/create-jira-version@v1
   with:
     token: ${{ secrets.JIRA_API_TOKEN }}
     project-key: CLOUDP

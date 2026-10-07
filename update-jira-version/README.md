@@ -28,7 +28,7 @@ Rename a version and set its release date:
 
 ```yaml
 - name: Rename and schedule
-  uses: mongodb/apix-action/update-version@v1
+  uses: mongodb/apix-action/update-jira-version@v1
   with:
     token: ${{ secrets.JIRA_API_TOKEN }}
     project-key: CLOUDP
@@ -41,7 +41,7 @@ Mark a version as released:
 
 ```yaml
 - name: Mark released
-  uses: mongodb/apix-action/update-version@v1
+  uses: mongodb/apix-action/update-jira-version@v1
   with:
     token: ${{ secrets.JIRA_API_TOKEN }}
     project-key: CLOUDP
