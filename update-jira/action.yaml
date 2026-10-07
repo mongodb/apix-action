@@ -7,12 +7,21 @@ inputs:
   issue-keys:
     description: "Issue key(s) to update. Comma or newline separated (one or many)."
     required: true
-  fields:
-    description: "JSON object of fields to set, merged into the request's 'fields'."
-    required: true
   api-base:
     description: "Base URL for the Jira API"
     default: "https://jira.mongodb.org"
+  summary:
+    description: "Summary of the issue"
+  description:
+    description: "Description of the issue"
+  assignee:
+    description: "Assignee of the issue"
+  labels:
+    description: "Labels for the issue. Comma separated."
+  components:
+    description: "Components for the issue. Comma separated."
+  extra-data:
+    description: "Extra data to be merged in the final request."
 outputs:
   updated:
     description: "Number of issues updated"
@@ -26,7 +35,12 @@ runs:
         JIRA_API_BASE: ${{ inputs.api-base }}
         JIRA_API_TOKEN: ${{ inputs.token }}
         ISSUE_KEYS: ${{ inputs.issue-keys }}
-        FIELDS: ${{ inputs.fields }}
+        SUMMARY: ${{ inputs.summary }}
+        DESCRIPTION: ${{ inputs.description }}
+        ASSIGNEE: ${{ inputs.assignee }}
+        LABELS: ${{ inputs.labels }}
+        COMPONENTS: ${{ inputs.components }}
+        EXTRA_DATA: ${{ inputs.extra-data }}
       run: |
         set -Eeou pipefail
 
@@ -35,7 +49,27 @@ runs:
           --header 'Accept: application/json'
         )
 
-        body=$(jq -n --argjson fields "${FIELDS}" '{fields: $fields}')
+        fields='{}'
+        if [[ -n "${SUMMARY}" ]]; then
+          fields=$(echo "${fields}" | jq --arg v "${SUMMARY}" '.summary=$v')
+        fi
+        if [[ -n "${DESCRIPTION}" ]]; then
+          fields=$(echo "${fields}" | jq --arg v "${DESCRIPTION}" '.description=$v')
+        fi
+        if [[ -n "${ASSIGNEE}" ]]; then
+          fields=$(echo "${fields}" | jq --arg v "${ASSIGNEE}" '.assignee={name:$v}')
+        fi
+        if [[ -n "${LABELS}" ]]; then
+          fields=$(echo "${fields}" | jq --arg v "${LABELS}" '.labels=($v|split(",")|map(select(. != "")))')
+        fi
+        if [[ -n "${COMPONENTS}" ]]; then
+          fields=$(echo "${fields}" | jq --arg v "${COMPONENTS}" '.components=($v|split(",")|map(select(. != ""))|map({name:.}))')
+        fi
+        if [[ -n "${EXTRA_DATA}" ]]; then
+          fields=$(echo "${fields}" | jq --argjson v "${EXTRA_DATA}" '. + $v')
+        fi
+
+        body=$(jq -n --argjson fields "${fields}" '{fields: $fields}')
 
         updated=0
         while IFS= read -r key; do

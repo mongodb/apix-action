@@ -1,7 +1,8 @@
 # Update Jira Issue Action
 
 A GitHub Action to update fields on one or more Jira issues. Accepts a single
-issue key or many, so it doubles as a bulk editor.
+issue key or many, so it doubles as a bulk editor. Mirrors the field inputs of
+[`create-jira`](../create-jira/README.md).
 
 ## Inputs
 
@@ -9,8 +10,13 @@ issue key or many, so it doubles as a bulk editor.
 |------|-------------|----------|---------|
 | `token` | Token to connect to Jira | Yes | |
 | `issue-keys` | Issue key(s) to update. Comma or newline separated (one or many) | Yes | |
-| `fields` | JSON object of fields to set, merged into the request's `fields` | Yes | |
 | `api-base` | Base URL for the Jira API | No | `https://jira.mongodb.org` |
+| `summary` | Summary of the issue | No | |
+| `description` | Description of the issue | No | |
+| `assignee` | Assignee of the issue | No | |
+| `labels` | Labels for the issue. Comma separated | No | |
+| `components` | Components for the issue. Comma separated | No | |
+| `extra-data` | Extra data to be merged in the final request (e.g. `fixVersions`) | No | |
 
 ## Outputs
 
@@ -20,18 +26,7 @@ issue key or many, so it doubles as a bulk editor.
 
 ## Example Usage
 
-Update a single issue:
-
-```yaml
-- name: Set fix version
-  uses: mongodb/apix-action/update-jira@v1
-  with:
-    token: ${{ secrets.JIRA_API_TOKEN }}
-    issue-keys: CLOUDP-123
-    fields: '{"fixVersions":[{"name":"next-atlascli-release"}]}'
-```
-
-Bulk update (one or many keys):
+Move unresolved tickets to the next release (bulk):
 
 ```yaml
 - name: Move unresolved tickets to the next release
@@ -39,12 +34,24 @@ Bulk update (one or many keys):
   with:
     token: ${{ secrets.JIRA_API_TOKEN }}
     issue-keys: ${{ steps.unresolved.outputs.issue-keys }}
-    fields: '{"fixVersions":[{"name":"next-atlascli-release"}]}'
+    extra-data: '{"fixVersions":[{"name":"next-atlascli-release"}]}'
+```
+
+Update a single issue's fields:
+
+```yaml
+- name: Reassign and label
+  uses: mongodb/apix-action/update-jira@v1
+  with:
+    token: ${{ secrets.JIRA_API_TOKEN }}
+    issue-keys: CLOUDP-123
+    assignee: opsmanager.serviceaccount
+    labels: "atlascli,release"
 ```
 
 ## Notes
 
 - Issues are updated with `PUT /rest/api/2/issue/{key}` one at a time, so the
   step fails fast on the first error. Re-running is safe (idempotent).
-- `fields` must be a valid JSON object; it is merged under the request's
-  `fields` key.
+- `extra-data` must be a valid JSON object; it is merged into the request's
+  `fields` (last write wins).
