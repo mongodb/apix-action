@@ -1,0 +1,52 @@
+name: 'Update Jira Issue'
+description: 'Update fields on one or more Jira issues'
+inputs:
+  token:
+    description: "Token to connect to Jira"
+    required: true
+  issue-keys:
+    description: "Issue key(s) to update. Comma or newline separated (one or many)."
+    required: true
+  fields:
+    description: "JSON object of fields to set, merged into the request's 'fields'."
+    required: true
+  api-base:
+    description: "Base URL for the Jira API"
+    default: "https://jira.mongodb.org"
+outputs:
+  updated:
+    description: "Number of issues updated"
+    value: ${{ steps.update.outputs.UPDATED }}
+runs:
+  using: "composite"
+  steps:
+    - id: update
+      shell: bash
+      env:
+        JIRA_API_BASE: ${{ inputs.api-base }}
+        JIRA_API_TOKEN: ${{ inputs.token }}
+        ISSUE_KEYS: ${{ inputs.issue-keys }}
+        FIELDS: ${{ inputs.fields }}
+      run: |
+        set -Eeou pipefail
+
+        auth=(
+          --header 'Authorization: Bearer '"${JIRA_API_TOKEN}"
+          --header 'Accept: application/json'
+        )
+
+        body=$(jq -n --argjson fields "${FIELDS}" '{fields: $fields}')
+
+        updated=0
+        while IFS= read -r key; do
+          key="$(echo "${key}" | tr -d '[:space:]')"
+          [[ -z "${key}" ]] && continue
+          curl --fail --silent --request PUT \
+            --url "${JIRA_API_BASE}/rest/api/2/issue/${key}" \
+            "${auth[@]}" \
+            --header 'Content-Type: application/json' \
+            --data "$body"
+          updated=$((updated + 1))
+        done < <(echo "${ISSUE_KEYS}" | tr ',' '\n')
+
+        echo "UPDATED=${updated}" >> "$GITHUB_OUTPUT"
