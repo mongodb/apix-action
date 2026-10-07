@@ -9,6 +9,12 @@ use crate::shared::Repo;
 /// Marks a reusable workflow reference as living in this repository.
 pub const LOCAL_PREFIX: &str = "./";
 
+/// GitHub's self-repository syntax, which also refers to this repository.
+pub const SELF_PREFIX: &str = "$/";
+
+/// Prefixes that mark a `uses:` reference as living in this repository.
+const LOCAL_PREFIXES: [&str; 2] = [LOCAL_PREFIX, SELF_PREFIX];
+
 /// Rewrites local reusable workflow references into permalinks into the source repository.
 pub struct Rewriter {
     source: Repo,
@@ -23,10 +29,10 @@ impl Rewriter {
         Self { source, root, sha }
     }
 
-    /// Replace every `uses: ./path` with `owner/name/path@sha`.
+    /// Replace every `uses: ./path` or `uses: $/path` with `owner/name/path@sha`.
     ///
     /// A reference that does not resolve is an error rather than a passthrough: the
-    /// unrewritten `./` form is valid YAML but resolves against the *target* repository,
+    /// unrewritten local form is valid YAML but resolves against the *target* repository,
     /// so shipping it would silently point every target at a workflow it does not have.
     pub fn rewrite(&self, contents: &str) -> Result<String> {
         let mut rewritten = Vec::new();
@@ -53,7 +59,7 @@ impl Rewriter {
         if !self.root.join(reference.path).exists() {
             bail!(
                 "local workflow reference '{}{}' does not exist under {}",
-                LOCAL_PREFIX,
+                reference.local_prefix,
                 reference.path,
                 self.root.display()
             );
@@ -68,14 +74,18 @@ impl Rewriter {
     }
 }
 
-// A `uses: ./path` reference split into the parts needed to rebuild the line.
+// A `uses: ./path` or `uses: $/path` reference split into the parts needed to
+// rebuild the line.
 struct LocalReference<'a> {
     /// Everything before `uses:`, preserving indentation and any sequence dash.
     prefix: &'a str,
+    /// The local-reference marker that matched (`./` or `$/`).
+    local_prefix: &'a str,
     path: &'a str,
 }
 
-// Recognize `uses: ./path`, ignoring any trailing comment the source line carried.
+// Recognize `uses: ./path` or `uses: $/path`, ignoring any trailing comment the
+// source line carried.
 fn parse_local_reference(line: &str) -> Option<LocalReference<'_>> {
     // `uses:` appears both as a mapping key and as the first key of a sequence item.
     let key = line.find("uses:")?;
@@ -88,14 +98,21 @@ fn parse_local_reference(line: &str) -> Option<LocalReference<'_>> {
     }
 
     let value = rest.strip_prefix("uses:")?.trim_start();
-    let path = value.strip_prefix(LOCAL_PREFIX)?;
+    let local_prefix = LOCAL_PREFIXES
+        .iter()
+        .find(|candidate| value.starts_with(**candidate))?;
+    let path = value.strip_prefix(local_prefix)?;
 
     // A reference may be followed by a comment; the path itself cannot contain whitespace.
     let path = path.split_whitespace().next()?;
     // An action directory is commonly written with a trailing slash, which a
     // `owner/name/path@sha` reference cannot carry.
     let path = path.trim_end_matches('/');
-    (!path.is_empty()).then_some(LocalReference { prefix, path })
+    (!path.is_empty()).then_some(LocalReference {
+        prefix,
+        local_prefix,
+        path,
+    })
 }
 
 /// Return the commit currently checked out at `root`.
@@ -161,6 +178,37 @@ mod tests {
         assert_eq!(
             rewritten,
             "jobs:\n  close-jira:\n    uses: mongodb/apix-action/.github/workflows/_close-jira.yaml@abc123\n"
+        );
+
+        fs::remove_dir_all(root).expect("clean up");
+    }
+
+    #[test]
+    fn rewrite_replaces_self_repository_reference_with_permalink() {
+        let root = root_with_workflow("self-repo");
+        fs::create_dir_all(root.join("create-jira")).expect("create action directory");
+
+        let contents = concat!(
+            "jobs:\n",
+            "  close-jira:\n",
+            "    uses: $/.github/workflows/_close-jira.yaml\n",
+            "  create:\n",
+            "    uses: $/create-jira\n"
+        );
+
+        let rewritten = rewriter(root.clone())
+            .rewrite(contents)
+            .expect("rewrite succeeds");
+
+        assert_eq!(
+            rewritten,
+            concat!(
+                "jobs:\n",
+                "  close-jira:\n",
+                "    uses: mongodb/apix-action/.github/workflows/_close-jira.yaml@abc123\n",
+                "  create:\n",
+                "    uses: mongodb/apix-action/create-jira@abc123\n"
+            )
         );
 
         fs::remove_dir_all(root).expect("clean up");
@@ -249,5 +297,10 @@ mod tests {
         assert!(parse_local_reference("    body: see uses: ./x.yaml").is_none());
         assert!(parse_local_reference("      - uses: ./x.yaml").is_some());
         assert!(parse_local_reference("    uses: ./x.yaml").is_some());
+        // GitHub's self-repository syntax is recognized the same way.
+        assert!(parse_local_reference("    uses: $/x.yaml").is_some());
+        assert!(parse_local_reference("      - uses: $/x.yaml").is_some());
+        assert!(parse_local_reference("    uses: $/").is_none());
+        assert!(parse_local_reference("    uses: owner/name/x.yaml@sha").is_none());
     }
 }
