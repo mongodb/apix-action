@@ -53,5 +53,9 @@ Update a single issue's fields:
 
 - Issues are updated with `PUT /rest/api/2/issue/{key}` one at a time, so the
   step fails fast on the first error. Re-running is safe (idempotent).
+- Jira Server/Data Center (e.g. `jira.mongodb.org`) exposes no bulk-*edit* REST
+  API — only bulk *create* (`/rest/api/2/issue/bulk`). The async bulk-edit
+  endpoint (`/rest/api/3/bulk/issues/fields`) is Cloud-only, so per-issue PUT is
+  the supported approach here. Fine for dozens of issues.
 - `extra-data` must be a valid JSON object; it is merged into the request's
   `fields` (last write wins).
