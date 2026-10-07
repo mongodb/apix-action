@@ -45,7 +45,7 @@ jobs:
       # ticket steps only run while the PR is still missing the marker label.
       - name: Create Jira ticket
         if: ${{ !contains(github.event.pull_request.labels.*.name, 'auto_close_jira') }}
-        uses: mongodb/apix-action/create-jira@f7d2400a387dea2661651b14bbaf8c8f46c8bf66 # v16
+        uses: $/create-jira
         id: create
         with:
           token: ${{ steps.load-secrets.outputs.JIRA_API_TOKEN }}
@@ -72,7 +72,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
       - name: Set Apix Bot token
         id: app-token
-        uses: mongodb/apix-action/token@f7d2400a387dea2661651b14bbaf8c8f46c8bf66 # v16
+        uses: $/token
         with:
           app-id: ${{ steps.load-secrets.outputs.APP_ID }}
           private-key: ${{ steps.decode-app-secret.outputs.APP_PEM }}
@@ -133,8 +133,8 @@ jobs:
       - name: Commit post-update changes
         id: commit
         if: steps.post-update.outcome == 'success'
-        # `./` resolves against the caller's workspace, so pin by permalink.
-        uses: mongodb/apix-action/commit-changes@b9d203ba30a17b2cae54f9bb2265b4142af38fec
+        # `$/` resolves to this repository at the running commit.
+        uses: $/commit-changes
         with:
           token: ${{ steps.app-token.outputs.token }}
           message: "${{ vars.DEPENDABOT_COMMIT_MESSAGE || 'chore: regenerate derived files' }}"
