@@ -1,0 +1,53 @@
+name: 'Create Jira Version'
+description: 'Create a Jira project version (fix version). Idempotent: returns the existing version id when the name already exists.'
+inputs:
+  token:
+    description: "Token to connect to Jira"
+    required: true
+  project-key:
+    description: "Project key that owns the version"
+    required: true
+  name:
+    description: "Version name to create"
+    required: true
+  api-base:
+    description: "Base URL for the Jira API"
+    default: "https://jira.mongodb.org"
+outputs:
+  version-id:
+    description: "Id of the existing or newly created version"
+    value: ${{ steps.create.outputs.VERSION_ID }}
+runs:
+  using: "composite"
+  steps:
+    - id: create
+      shell: bash
+      env:
+        JIRA_API_BASE: ${{ inputs.api-base }}
+        JIRA_API_TOKEN: ${{ inputs.token }}
+        PROJECT_KEY: ${{ inputs.project-key }}
+        NAME: ${{ inputs.name }}
+      run: |
+        set -Eeou pipefail
+
+        auth=(
+          --header 'Authorization: Bearer '"${JIRA_API_TOKEN}"
+          --header 'Accept: application/json'
+        )
+
+        VERSION_ID=$(curl --fail --silent \
+          --url "${JIRA_API_BASE}/rest/api/2/project/${PROJECT_KEY}/versions" \
+          "${auth[@]}" \
+          | jq -r --arg name "${NAME}" '.[] | select(.name == $name) | .id' | head -n 1)
+
+        if [[ -z "${VERSION_ID}" ]]; then
+          body=$(jq -n --arg name "${NAME}" '{name:$name}')
+          response=$(curl --fail --silent --request POST \
+            --url "${JIRA_API_BASE}/rest/api/2/project/${PROJECT_KEY}/versions" \
+            "${auth[@]}" \
+            --header 'Content-Type: application/json' \
+            --data "$body")
+          VERSION_ID=$(echo "${response}" | jq -r '.id')
+        fi
+
+        echo "VERSION_ID=${VERSION_ID}" >> "$GITHUB_OUTPUT"

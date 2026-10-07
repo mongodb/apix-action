@@ -24,10 +24,10 @@ jobs:
         id: transition
         run: |
           if [[ "${{ github.event.pull_request.merged }}" == "true" ]]; then
-            echo "id=1381" >> "$GITHUB_OUTPUT"
+            echo "name=Resolve Issue" >> "$GITHUB_OUTPUT"
             echo "resolution=Fixed" >> "$GITHUB_OUTPUT"
           else
-            echo "id=1371" >> "$GITHUB_OUTPUT"
+            echo "name=Close Issue" >> "$GITHUB_OUTPUT"
             echo "resolution=Won't Fix" >> "$GITHUB_OUTPUT"
           fi
       - name: Find Jira key
@@ -43,5 +43,5 @@ jobs:
         with:
           token: ${{ steps.load-secrets.outputs.JIRA_API_TOKEN }}
           issue-key: ${{ steps.find.outputs.key }}
-          transition-id: ${{ steps.transition.outputs.id }}
+          transition-name: ${{ steps.transition.outputs.name }}
           resolution: ${{ steps.transition.outputs.resolution }}

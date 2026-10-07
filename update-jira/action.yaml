@@ -1,0 +1,86 @@
+name: 'Update Jira Issue'
+description: 'Update fields on one or more Jira issues'
+inputs:
+  token:
+    description: "Token to connect to Jira"
+    required: true
+  issue-keys:
+    description: "Issue key(s) to update. Comma or newline separated (one or many)."
+    required: true
+  api-base:
+    description: "Base URL for the Jira API"
+    default: "https://jira.mongodb.org"
+  summary:
+    description: "Summary of the issue"
+  description:
+    description: "Description of the issue"
+  assignee:
+    description: "Assignee of the issue"
+  labels:
+    description: "Labels for the issue. Comma separated."
+  components:
+    description: "Components for the issue. Comma separated."
+  extra-data:
+    description: "Extra data to be merged in the final request."
+outputs:
+  updated:
+    description: "Number of issues updated"
+    value: ${{ steps.update.outputs.UPDATED }}
+runs:
+  using: "composite"
+  steps:
+    - id: update
+      shell: bash
+      env:
+        JIRA_API_BASE: ${{ inputs.api-base }}
+        JIRA_API_TOKEN: ${{ inputs.token }}
+        ISSUE_KEYS: ${{ inputs.issue-keys }}
+        SUMMARY: ${{ inputs.summary }}
+        DESCRIPTION: ${{ inputs.description }}
+        ASSIGNEE: ${{ inputs.assignee }}
+        LABELS: ${{ inputs.labels }}
+        COMPONENTS: ${{ inputs.components }}
+        EXTRA_DATA: ${{ inputs.extra-data }}
+      run: |
+        set -Eeou pipefail
+
+        auth=(
+          --header 'Authorization: Bearer '"${JIRA_API_TOKEN}"
+          --header 'Accept: application/json'
+        )
+
+        fields='{}'
+        if [[ -n "${SUMMARY}" ]]; then
+          fields=$(echo "${fields}" | jq --arg v "${SUMMARY}" '.summary=$v')
+        fi
+        if [[ -n "${DESCRIPTION}" ]]; then
+          fields=$(echo "${fields}" | jq --arg v "${DESCRIPTION}" '.description=$v')
+        fi
+        if [[ -n "${ASSIGNEE}" ]]; then
+          fields=$(echo "${fields}" | jq --arg v "${ASSIGNEE}" '.assignee={name:$v}')
+        fi
+        if [[ -n "${LABELS}" ]]; then
+          fields=$(echo "${fields}" | jq --arg v "${LABELS}" '.labels=($v|split(",")|map(select(. != "")))')
+        fi
+        if [[ -n "${COMPONENTS}" ]]; then
+          fields=$(echo "${fields}" | jq --arg v "${COMPONENTS}" '.components=($v|split(",")|map(select(. != ""))|map({name:.}))')
+        fi
+        if [[ -n "${EXTRA_DATA}" ]]; then
+          fields=$(echo "${fields}" | jq --argjson v "${EXTRA_DATA}" '. + $v')
+        fi
+
+        body=$(jq -n --argjson fields "${fields}" '{fields: $fields}')
+
+        updated=0
+        while IFS= read -r key; do
+          key="$(echo "${key}" | tr -d '[:space:]')"
+          [[ -z "${key}" ]] && continue
+          curl --fail --silent --request PUT \
+            --url "${JIRA_API_BASE}/rest/api/2/issue/${key}" \
+            "${auth[@]}" \
+            --header 'Content-Type: application/json' \
+            --data "$body"
+          updated=$((updated + 1))
+        done < <(echo "${ISSUE_KEYS}" | tr ',' '\n')
+
+        echo "UPDATED=${updated}" >> "$GITHUB_OUTPUT"

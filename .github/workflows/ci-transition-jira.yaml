@@ -24,8 +24,8 @@ jobs:
                   listen 80;
 
                   location /rest/api/2/issue/TEST-123/transitions {
-                      default_type text/plain;
-                      return 200 'OK';
+                      default_type application/json;
+                      return 200 '{"transitions":[{"id":"1","name":"TEST"}]}';
                   }
 
                   location /ping {
@@ -60,6 +60,6 @@ jobs:
         with:
           token: test
           issue-key: TEST-123
-          transition-id: TEST
+          transition-name: TEST
           resolution: TEST
           api-base: http://localhost:55000
