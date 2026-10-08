@@ -29,10 +29,12 @@ runs:
         NAME: ${{ inputs.name }}
       run: |
         set -Eeou pipefail
-        body=$(jq -n --arg name "${NAME}" '{name:$name}')
+        # Versions are created at /rest/api/2/version (the project goes in the
+        # body); /rest/api/2/project/<key>/versions only accepts GET.
+        body=$(jq -n --arg project "${PROJECT_KEY}" --arg name "${NAME}" '{project:$project, name:$name}')
         response=$(curl --fail --silent --show-error \
           --request POST \
-          --url "${JIRA_API_BASE}/rest/api/2/project/${PROJECT_KEY}/versions" \
+          --url "${JIRA_API_BASE}/rest/api/2/version" \
           --header 'Authorization: Bearer '"${JIRA_API_TOKEN}" \
           --header 'Accept: application/json' \
           --header 'Content-Type: application/json' \

@@ -22,6 +22,8 @@ version in one array (that endpoint is not paginated).
 |------|-------------|
 | `version-id` | Id of the version, empty when no version with that name exists |
 | `found` | `'true'` when a version with the given name exists, otherwise `'false'` |
+| `released` | `'true'` when the version is marked released |
+| `archived` | `'true'` when the version is archived |
 
 ## Example Usage
 

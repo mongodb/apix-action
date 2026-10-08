@@ -16,7 +16,7 @@ issue key or many, so it doubles as a bulk editor. Mirrors the field inputs of
 | `assignee` | Assignee of the issue | No | |
 | `labels` | Labels for the issue. Comma separated | No | |
 | `components` | Components for the issue. Comma separated | No | |
-| `extra-data` | Extra data to be merged in the final request (e.g. `fixVersions`) | No | |
+| `extra-data` | Extra data merged into the request body; nest under `fields` (e.g. `{"fields": {"fixVersions": [...]}}`) | No | |
 
 ## Outputs
 
@@ -34,7 +34,7 @@ Bulk update multiple issues:
   with:
     token: ${{ secrets.JIRA_API_TOKEN }}
     issue-keys: CLOUDP-123,CLOUDP-456
-    extra-data: '{"fixVersions":[{"name":"next-atlascli-release"}]}'
+    extra-data: '{"fields":{"fixVersions":[{"name":"next-atlascli-release"}]}}'
 ```
 
 Update a single issue's fields:
@@ -57,5 +57,6 @@ Update a single issue's fields:
   API — only bulk *create* (`/rest/api/2/issue/bulk`). The async bulk-edit
   endpoint (`/rest/api/3/bulk/issues/fields`) is Cloud-only, so per-issue PUT is
   the supported approach here. Fine for dozens of issues.
-- `extra-data` must be a valid JSON object; it is merged into the request's
-  `fields` (last write wins).
+- `extra-data` must be a valid JSON object. It is merged into the request body
+  (like `create-jira`), so nest fields under `fields` — e.g.
+  `{"fields": {"fixVersions": [{"name": "..."}]}}`.
