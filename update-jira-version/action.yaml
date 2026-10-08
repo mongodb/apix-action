@@ -1,14 +1,11 @@
 name: 'Update Jira Version'
-description: 'Update a Jira project version (fix version): rename, set the release date, and/or mark it released.'
+description: 'Update a Jira project version (fix version) by id: rename, set the release date, and/or mark it released.'
 inputs:
   token:
     description: "Token to connect to Jira"
     required: true
-  project-key:
-    description: "Project key that owns the version"
-    required: true
-  name:
-    description: "Current version name used to locate the version"
+  version-id:
+    description: "Id of the version to update"
     required: true
   new-name:
     description: "New version name (rename)"
@@ -22,7 +19,7 @@ inputs:
 outputs:
   version-id:
     description: "Id of the updated version"
-    value: ${{ steps.update.outputs.VERSION_ID }}
+    value: ${{ inputs.version-id }}
 runs:
   using: "composite"
   steps:
@@ -31,29 +28,12 @@ runs:
       env:
         JIRA_API_BASE: ${{ inputs.api-base }}
         JIRA_API_TOKEN: ${{ inputs.token }}
-        PROJECT_KEY: ${{ inputs.project-key }}
-        NAME: ${{ inputs.name }}
+        VERSION_ID: ${{ inputs.version-id }}
         NEW_NAME: ${{ inputs.new-name }}
         RELEASE_DATE: ${{ inputs.release-date }}
         RELEASED: ${{ inputs.released }}
       run: |
         set -Eeou pipefail
-
-        auth=(
-          --header 'Authorization: Bearer '"${JIRA_API_TOKEN}"
-          --header 'Accept: application/json'
-        )
-
-        VERSION_ID=$(curl --fail --silent \
-          --url "${JIRA_API_BASE}/rest/api/2/project/${PROJECT_KEY}/versions" \
-          "${auth[@]}" \
-          | jq -r --arg name "${NAME}" '.[] | select(.name == $name) | .id' | head -n 1)
-
-        if [[ -z "${VERSION_ID}" ]]; then
-          echo "version '${NAME}' not found in project '${PROJECT_KEY}'" >&2
-          exit 1
-        fi
-
         payload='{}'
         if [[ -n "${NEW_NAME}" ]]; then
           payload=$(echo "$payload" | jq --arg v "${NEW_NAME}" '.name=$v')
@@ -64,11 +44,10 @@ runs:
         if [[ -n "${RELEASED}" ]]; then
           payload=$(echo "$payload" | jq --argjson v "${RELEASED}" '.released=$v')
         fi
-
-        curl --fail --silent --request PUT \
+        curl --fail --silent --show-error \
+          --request PUT \
           --url "${JIRA_API_BASE}/rest/api/2/version/${VERSION_ID}" \
-          "${auth[@]}" \
+          --header 'Authorization: Bearer '"${JIRA_API_TOKEN}" \
+          --header 'Accept: application/json' \
           --header 'Content-Type: application/json' \
-          --data "$payload"
-
-        echo "VERSION_ID=${VERSION_ID}" >> "$GITHUB_OUTPUT"
+          --data "$payload" > /dev/null

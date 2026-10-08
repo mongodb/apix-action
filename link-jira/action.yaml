@@ -42,7 +42,7 @@ runs:
           request=$(echo "${request}" | jq --arg body "${COMMENT}" '. + {comment: {body: $body}}')
         fi
 
-        curl --fail --silent --request POST \
+        curl --fail --silent --show-error --request POST \
           --url "${JIRA_API_BASE}/rest/api/2/issueLink" \
           --header 'Authorization: Bearer '"${JIRA_API_TOKEN}" \
           --header 'Accept: application/json' \

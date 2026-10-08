@@ -1,0 +1,48 @@
+name: 'Get Jira Version'
+description: 'Look up a Jira project version (fix version) by name. Outputs its id (empty when it does not exist).'
+inputs:
+  token:
+    description: "Token to connect to Jira"
+    required: true
+  project-key:
+    description: "Project key that owns the version"
+    required: true
+  name:
+    description: "Version name to look up"
+    required: true
+  api-base:
+    description: "Base URL for the Jira API"
+    default: "https://jira.mongodb.org"
+outputs:
+  version-id:
+    description: "Id of the version, empty when no version with that name exists"
+    value: ${{ steps.get.outputs.VERSION_ID }}
+  found:
+    description: "'true' when a version with the given name exists, otherwise 'false'"
+    value: ${{ steps.get.outputs.FOUND }}
+runs:
+  using: "composite"
+  steps:
+    - id: get
+      shell: bash
+      env:
+        JIRA_API_BASE: ${{ inputs.api-base }}
+        JIRA_API_TOKEN: ${{ inputs.token }}
+        PROJECT_KEY: ${{ inputs.project-key }}
+        NAME: ${{ inputs.name }}
+      run: |
+        set -Eeou pipefail
+        # The (plural) versions endpoint returns every version as an array; it
+        # is not paginated.
+        versions=$(curl --fail --silent --show-error \
+          --url "${JIRA_API_BASE}/rest/api/2/project/${PROJECT_KEY}/versions" \
+          --header 'Authorization: Bearer '"${JIRA_API_TOKEN}" \
+          --header 'Accept: application/json')
+        VERSION_ID=$(printf '%s' "${versions}" | jq -r --arg name "${NAME}" \
+          '[.[] | select(.name == $name)][0].id // ""')
+        echo "VERSION_ID=${VERSION_ID}" >> "$GITHUB_OUTPUT"
+        if [[ -n "${VERSION_ID}" ]]; then
+          echo "FOUND=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "FOUND=false" >> "$GITHUB_OUTPUT"
+        fi
