@@ -35,7 +35,7 @@
     "@types/node": "^26.6.4",
     "@types/request": "^2.48.13",
     "jest": "^30.5.2",
-    "rollup": "^4.63.5",
+    "rollup": "^4.64.0",
     "ts-jest": "^29.4.14",
     "tslib": "^2.6.2",
     "typescript": "^6.0.3"
