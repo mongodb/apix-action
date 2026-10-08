@@ -65,11 +65,13 @@ runs:
         if [[ -n "${COMPONENTS}" ]]; then
           fields=$(echo "${fields}" | jq --arg v "${COMPONENTS}" '.components=($v|split(",")|map(select(. != ""))|map({name:.}))')
         fi
-        if [[ -n "${EXTRA_DATA}" ]]; then
-          fields=$(echo "${fields}" | jq --argjson v "${EXTRA_DATA}" '. + $v')
-        fi
-
         body=$(jq -n --argjson fields "${fields}" '{fields: $fields}')
+
+        # extra-data is merged into the request body, like create-jira, so it
+        # must be nested under "fields" (e.g. '{"fields": {"fixVersions": [...]}}').
+        if [[ -n "${EXTRA_DATA}" ]]; then
+          body=$(echo "${body}" | jq --argjson v "${EXTRA_DATA}" '. * $v')
+        fi
 
         updated=0
         while IFS= read -r key; do
