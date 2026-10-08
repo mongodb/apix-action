@@ -1,5 +1,5 @@
 name: 'Get Jira Version'
-description: 'Look up a Jira project version (fix version) by name. Outputs its id (empty when it does not exist).'
+description: 'Look up a Jira project version (fix version) by name. Outputs its id and flags (empty when it does not exist).'
 inputs:
   token:
     description: "Token to connect to Jira"
@@ -20,6 +20,12 @@ outputs:
   found:
     description: "'true' when a version with the given name exists, otherwise 'false'"
     value: ${{ steps.get.outputs.FOUND }}
+  released:
+    description: "'true' when the version is marked released"
+    value: ${{ steps.get.outputs.RELEASED }}
+  archived:
+    description: "'true' when the version is archived"
+    value: ${{ steps.get.outputs.ARCHIVED }}
 runs:
   using: "composite"
   steps:
@@ -38,11 +44,13 @@ runs:
           --url "${JIRA_API_BASE}/rest/api/2/project/${PROJECT_KEY}/versions" \
           --header 'Authorization: Bearer '"${JIRA_API_TOKEN}" \
           --header 'Accept: application/json')
-        VERSION_ID=$(printf '%s' "${versions}" | jq -r --arg name "${NAME}" \
-          '[.[] | select(.name == $name)][0].id // ""')
+        version=$(printf '%s' "${versions}" | jq -c --arg name "${NAME}" '[.[] | select(.name == $name)][0] // {}')
+        VERSION_ID=$(printf '%s' "${version}" | jq -r '.id // ""')
         echo "VERSION_ID=${VERSION_ID}" >> "$GITHUB_OUTPUT"
         if [[ -n "${VERSION_ID}" ]]; then
           echo "FOUND=true" >> "$GITHUB_OUTPUT"
         else
           echo "FOUND=false" >> "$GITHUB_OUTPUT"
         fi
+        echo "RELEASED=$(printf '%s' "${version}" | jq -r '.released // false')" >> "$GITHUB_OUTPUT"
+        echo "ARCHIVED=$(printf '%s' "${version}" | jq -r '.archived // false')" >> "$GITHUB_OUTPUT"
