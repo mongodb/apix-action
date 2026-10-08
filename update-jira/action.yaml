@@ -75,7 +75,7 @@ runs:
         while IFS= read -r key; do
           key="$(echo "${key}" | tr -d '[:space:]')"
           [[ -z "${key}" ]] && continue
-          curl --fail --silent --request PUT \
+          curl --fail --silent --show-error --request PUT \
             --url "${JIRA_API_BASE}/rest/api/2/issue/${key}" \
             "${auth[@]}" \
             --header 'Content-Type: application/json' \

@@ -53,7 +53,7 @@ runs:
         JIRA_API_BASE: ${{ inputs.api-base }}
         REQUEST_BODY: ${{ steps.request.outputs.REQUEST_BODY }}
       run: |
-        json_response=$(curl --fail --request POST \
+        json_response=$(curl --fail --silent --show-error --request POST \
           --url "${JIRA_API_BASE}/rest/api/2/search" \
           --header 'Authorization: Bearer '"${JIRA_API_TOKEN}" \
           --header 'Accept: application/json' \

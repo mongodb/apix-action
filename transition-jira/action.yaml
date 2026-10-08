@@ -31,7 +31,7 @@ runs:
         set -Eeou pipefail
 
         if [[ -z "${TRANSITION_ID}" && -n "${TRANSITION_NAME}" ]]; then
-          TRANSITION_ID=$(curl --fail --silent \
+          TRANSITION_ID=$(curl --fail --silent --show-error \
             --url "${JIRA_API_BASE}/rest/api/2/issue/${ISSUE_KEY}/transitions" \
             --header 'Authorization: Bearer '"${JIRA_API_TOKEN}" \
             --header 'Accept: application/json' \
@@ -47,7 +47,7 @@ runs:
         if [[ -n "$RESOLUTION" ]]; then
           request=$(echo "$request" | jq --arg resolution "$RESOLUTION" '[.,{fields:{resolution:{name:$resolution}}}] | add')
         fi
-        curl --fail --silent --request POST \
+        curl --fail --silent --show-error --request POST \
           --url "${JIRA_API_BASE}/rest/api/2/issue/$ISSUE_KEY/transitions" \
           --header 'Authorization: Bearer '"${JIRA_API_TOKEN}" \
           --header 'Accept: application/json' \

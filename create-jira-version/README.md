@@ -1,8 +1,9 @@
 # Create Jira Version Action
 
-A GitHub Action to create a Jira project version (fix version). Idempotent: if a
-version with the given name already exists, its id is returned and no new version
-is created.
+A GitHub Action to create a Jira project version (fix version). It is a plain
+create: it fails if a version with the given name already exists. To create only
+when missing, check with [`get-jira-version`](../get-jira-version/README.md)
+first (see the example below).
 
 ## Inputs
 
@@ -17,7 +18,7 @@ is created.
 
 | Name | Description |
 |------|-------------|
-| `version-id` | Id of the existing or newly created version |
+| `version-id` | Id of the newly created version |
 
 ## Example Usage
 
@@ -33,3 +34,28 @@ is created.
 - name: Use the version id
   run: echo "version id ${{ steps.create_version.outputs.version-id }}"
 ```
+
+## Create only when missing
+
+```yaml
+- name: Find the rolling next fix version
+  id: find_version
+  uses: mongodb/apix-action/get-jira-version@v1
+  with:
+    token: ${{ secrets.JIRA_API_TOKEN }}
+    project-key: CLOUDP
+    name: next-atlascli-release
+
+- name: Create the rolling next fix version
+  if: steps.find_version.outputs.found != 'true'
+  uses: mongodb/apix-action/create-jira-version@v1
+  with:
+    token: ${{ secrets.JIRA_API_TOKEN }}
+    project-key: CLOUDP
+    name: next-atlascli-release
+```
+
+## Errors
+
+A non-2xx response from Jira is reported with its HTTP status and response body,
+so failures explain themselves rather than surfacing as a bare `curl` exit code.
