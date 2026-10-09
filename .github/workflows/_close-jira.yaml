@@ -2,6 +2,9 @@ name: Auto Close Jira (reusable)
 
 on:
   workflow_call:
+    secrets:
+      op_service_account_token:
+        required: true
 
 permissions:
   pull-requests: read
