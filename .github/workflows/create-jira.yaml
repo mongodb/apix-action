@@ -21,4 +21,5 @@ jobs:
       contents: read
       pull-requests: write
     uses: ./.github/workflows/_create-jira.yaml
-    secrets: inherit
+    secrets:
+      op_service_account_token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}

@@ -2,6 +2,9 @@ name: Reopen Jira Ticket on Issue Reopen (reusable)
 
 on:
   workflow_call:
+    secrets:
+      op_service_account_token:
+        required: true
 
 permissions:
   issues: read

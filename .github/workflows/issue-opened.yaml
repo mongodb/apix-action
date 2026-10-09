@@ -19,4 +19,5 @@ jobs:
       contents: read
       issues: write
     uses: ./.github/workflows/_issue-opened.yaml
-    secrets: inherit
+    secrets:
+      op_service_account_token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}

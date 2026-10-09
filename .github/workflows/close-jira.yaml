@@ -18,4 +18,5 @@ jobs:
       contents: read
       pull-requests: read
     uses: ./.github/workflows/_close-jira.yaml
-    secrets: inherit
+    secrets:
+      op_service_account_token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
