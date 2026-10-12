@@ -38,8 +38,19 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           URL: ${{ github.event.pull_request.html_url }}
+          REF: ${{ github.event.pull_request.head.ref }}
         run: |
-          JIRA_KEY=$(gh pr view "$URL" --comments | grep 'was created for internal tracking' | grep -oE 'CLOUDP-[0-9]+' | head -1)
+          set -Eeou pipefail
+          if [[ "$REF" =~ ^(CLOUDP-[0-9]+)($|[^0-9]) ]]; then
+            JIRA_KEY=${BASH_REMATCH[1]}
+          else
+            COMMENTS=$(gh pr view "$URL" --json comments --jq '.comments[].body')
+            JIRA_KEY=$(printf '%s\n' "$COMMENTS" | awk '/was created for internal tracking/ && match($0, /CLOUDP-[0-9]+/) && !found { print substr($0, RSTART, RLENGTH); found=1 }')
+          fi
+          if [[ -z "$JIRA_KEY" ]]; then
+            echo "::error::No Jira key found in branch '$REF' or tracking comments for $URL" >&2
+            exit 1
+          fi
           echo "key=$JIRA_KEY" >> "$GITHUB_OUTPUT"
       - name: Transition Jira ticket
         uses: $/transition-jira
