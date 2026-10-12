@@ -4,6 +4,8 @@
 # sync -> mongodb-js/atlas-local-lib-js
 # sync -> mongodb/atlas-local-lib-py
 # sync -> mongodb-labs/cobra2snooty
+# sync -> mongodb/mongodb-atlas-cli
+# sync -> mongodb-forks/chocolatey-packages
 
 name: Reopen Jira Ticket on Issue Reopen
 
