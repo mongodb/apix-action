@@ -58,6 +58,7 @@ jobs:
           description: "This ticket tracks the following GitHub pull request: ${{ github.event.pull_request.html_url }}"
           components: ${{ steps.config.outputs.component }}
           assignee: cloud-atlascli-escalation
+          labels: dependency
           extra-data: |
             {
               "fields": {
