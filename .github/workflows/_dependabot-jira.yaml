@@ -60,9 +60,6 @@ jobs:
         with:
           app-id: ${{ steps.load-secrets.outputs.APP_ID }}
           private-key: ${{ steps.decode-app-secret.outputs.APP_PEM }}
-      # A re-run replays the event payload captured at run creation, so the marker
-      # label the first attempt added is invisible here. Gate on the PR's current
-      # comments (the same marker close-jira reads) instead of the stale payload.
       - name: Check for an existing ticket
         id: existing
         env:
