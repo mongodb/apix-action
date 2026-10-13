@@ -12,6 +12,9 @@ jobs:
   dependabot:
     name: Create Jira ticket and auto merge
     runs-on: ubuntu-latest
+    concurrency:
+      group: dependabot-jira-${{ github.event.pull_request.number }}
+      cancel-in-progress: false
     steps:
       - uses: GitHubSecurityLab/actions-permissions/monitor@bf82d13b9b10051d224345ab9184f5ede0a94289 # v1
         with:
@@ -44,10 +47,30 @@ jobs:
               echo "fix-version=Not Applicable" >> "$GITHUB_OUTPUT"
               ;;
           esac
-      # Re-runs (Dependabot rebase/recreate) must not file a second ticket, so the
-      # ticket steps only run while the PR is still missing the marker label.
+      - id: decode-app-secret
+        run: |
+          {
+            echo 'APP_PEM<<EOF'
+            echo "${{ steps.load-secrets.outputs.APP_SECRET }}" | base64 -d | openssl pkey -inform DER -outform PEM
+            echo EOF
+          } >> "$GITHUB_OUTPUT"
+      - name: Set Apix Bot token
+        id: app-token
+        uses: $/token
+        with:
+          app-id: ${{ steps.load-secrets.outputs.APP_ID }}
+          private-key: ${{ steps.decode-app-secret.outputs.APP_PEM }}
+      - name: Check for an existing ticket
+        id: existing
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          n=$(gh pr view "$URL" --json comments \
+            --jq '[.comments[].body | select(test("was created for internal tracking"))] | length')
+          echo "create=$([ "$n" -eq 0 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
       - name: Create Jira ticket
-        if: ${{ !contains(github.event.pull_request.labels.*.name, 'auto_close_jira') }}
+        if: ${{ steps.existing.outputs.create == 'true' }}
         uses: $/create-jira
         id: create
         with:
@@ -67,21 +90,8 @@ jobs:
                 "customfield_10257": {"id": "11861"}
               }
             }
-      - id: decode-app-secret
-        run: |
-          {
-            echo 'APP_PEM<<EOF'
-            echo "${{ steps.load-secrets.outputs.APP_SECRET }}" | base64 -d | openssl pkey -inform DER -outform PEM
-            echo EOF
-          } >> "$GITHUB_OUTPUT"
-      - name: Set Apix Bot token
-        id: app-token
-        uses: $/token
-        with:
-          app-id: ${{ steps.load-secrets.outputs.APP_ID }}
-          private-key: ${{ steps.decode-app-secret.outputs.APP_PEM }}
       - name: Add comment
-        if: ${{ !contains(github.event.pull_request.labels.*.name, 'auto_close_jira') }}
+        if: ${{ steps.existing.outputs.create == 'true' }}
         uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9 # v5
         with:
           token: ${{ steps.app-token.outputs.token }}
@@ -91,7 +101,7 @@ jobs:
 
             Note: Jira ticket will be closed automatically when this PR is merged.
       - name: Add auto_close_jira label
-        if: ${{ !contains(github.event.pull_request.labels.*.name, 'auto_close_jira') }}
+        if: ${{ steps.existing.outputs.create == 'true' }}
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: gh pr edit "${{ github.event.pull_request.html_url }}" --add-label "auto_close_jira"

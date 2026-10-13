@@ -63,10 +63,12 @@ for `dependabot[bot]`, so that
 follow-up run does not regenerate a second time, and a run that pushed a commit skips approving
 so that only the settled head is approved. Two further guards
 make the re-runs safe: the ticket, comment, and `auto_close_jira` label steps are skipped once
-the PR already carries that label, so no duplicate tickets are filed; and every commit in the
-PR must be authored by `dependabot[bot]` or by this app's own bot and signed by GitHub, so a
-write-access user cannot smuggle a commit onto a Dependabot branch and have it auto-merged and
-executed.
+the PR already carries the tracking comment, so no duplicate tickets are filed — the check reads
+the PR's current comments rather than the event payload, which a re-run freezes at run-creation
+time, and a per-PR `concurrency` group serializes the `opened`/`synchronize` runs; and every
+commit in the PR must be authored by `dependabot[bot]` or by this app's own bot and signed by
+GitHub, so a write-access user cannot smuggle a commit onto a Dependabot branch and have it
+auto-merged and executed.
 
 The script only edits files in the checked-out PR branch — no git commands. The workflow stages
 the result, writes the commit message, and creates the commit through the GitHub API
