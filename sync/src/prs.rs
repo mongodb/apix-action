@@ -10,7 +10,7 @@ use git2::{Repository, Status, StatusOptions};
 use octocrab::{Octocrab, models::IssueState, params, params::repos::Reference};
 use redacted::FullyRedacted;
 use serde::{Deserialize, Serialize};
-use tracing::info;
+use tracing::{info, warn};
 
 use crate::shared::{GithubToken, Repo};
 
@@ -37,6 +37,14 @@ mutation (
       oid
       signature { wasSignedByGitHub }
     }
+  }
+}";
+
+// Arm auto-merge so the pull request merges once the required checks pass.
+const ENABLE_AUTO_MERGE: &str = "
+mutation ($pullRequestId: ID!, $mergeMethod: PullRequestMergeMethod!) {
+  enablePullRequestAutoMerge(input: {pullRequestId: $pullRequestId, mergeMethod: $mergeMethod}) {
+    pullRequest { number }
   }
 }";
 
@@ -130,6 +138,18 @@ pub async fn create(
             "https://github.com/{}/{}/pull/{}",
             repository.owner, repository.repository, pull_request.number
         );
+
+        // Arm auto-merge so the PR merges once the required checks pass. apix-bot is
+        // exempt from the review rule, so no approval is required; a failure here is
+        // not fatal because the PR can still be merged by hand.
+        match &pull_request.node_id {
+            Some(node_id) => {
+                if let Err(error) = enable_auto_merge(&github, node_id).await {
+                    warn!(url = %url, error = %error, "could not enable auto-merge");
+                }
+            }
+            None => warn!(url = %url, "pull request has no node id, skipping auto-merge"),
+        }
         info!(url = %url, "pull request created");
         pull_requests.push(CreatedPullRequest {
             repository: format!("{}/{}", repository.owner, repository.repository),
@@ -140,6 +160,21 @@ pub async fn create(
     }
 
     Ok(pull_requests)
+}
+
+// Enable auto-merge (squash) on a pull request by its GraphQL node id.
+async fn enable_auto_merge(github: &Octocrab, pull_request_id: &str) -> Result<()> {
+    let _: serde_json::Value = github
+        .graphql(&serde_json::json!({
+            "query": ENABLE_AUTO_MERGE,
+            "variables": {
+                "pullRequestId": pull_request_id,
+                "mergeMethod": "SQUASH",
+            }
+        }))
+        .await
+        .context("enabling auto-merge")?;
+    Ok(())
 }
 
 /// Render created pull request JSON files as one Markdown summary.

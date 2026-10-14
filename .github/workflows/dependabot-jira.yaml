@@ -5,7 +5,9 @@
 # sync -> mongodb/mongodb-atlas-cli
 # sync -> mongodb/mongodb-atlas-local
 # sync -> mongodb-labs/cobra2snooty
-# sync -> mongodb-forks/chocolatey-packages
+# sync -> 10gen/apix-dashboards
+# sync -> mongodb/atlas-cli-core
+# sync -> mongodb/atlas-github-action
 
 name: Dependabot PR automation
 

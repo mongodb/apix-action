@@ -6,6 +6,12 @@
 # sync -> mongodb-labs/cobra2snooty
 # sync -> mongodb/mongodb-atlas-cli
 # sync -> mongodb-forks/chocolatey-packages
+# sync -> 10gen/apix-dashboards
+# sync -> 10gen/apix-devtools
+# sync -> mongodb/atlas-cli-core
+# sync -> mongodb/atlas-cli-plugin-example
+# sync -> mongodb/atlas-github-action
+# sync -> mongodb-forks/digest
 
 name: Create Jira Ticket for New Issues
 
