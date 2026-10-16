@@ -45,18 +45,28 @@ runs:
           exit 0
         fi
 
-        # additions carry base64 contents, deletions just a path; --no-renames splits a rename
+        tmp=$(mktemp -d)
+        trap 'rm -rf "$tmp"' EXIT
+
+        # additions carry base64 contents, deletions just a path; --no-renames splits a rename.
+        # File contents and the assembled payload are staged in files and read back with
+        # --rawfile/--slurpfile rather than passed as command-line arguments: the OS caps a
+        # single argument at MAX_ARG_STRLEN (~128 KiB on Linux), which a large file's base64
+        # overflows, making jq fail with "Argument list too long".
         additions='[]'
         deletions='[]'
         while IFS=$'\t' read -r change path; do
           if [ "${change:0:1}" = "D" ]; then
             deletions=$(jq -c --arg path "$path" '. + [{path: $path}]' <<<"$deletions")
           else
-            contents=$(base64 -w0 -- "$path")
-            additions=$(jq -c --arg path "$path" --arg contents "$contents" \
+            base64 -w0 -- "$path" | tr -d '\n' > "$tmp/contents.b64"
+            additions=$(jq -c --arg path "$path" --rawfile contents "$tmp/contents.b64" \
               '. + [{path: $path, contents: $contents}]' <<<"$additions")
           fi
         done < <(git diff --cached --name-status --no-renames HEAD)
+
+        printf '%s' "$additions" > "$tmp/additions.json"
+        printf '%s' "$deletions" > "$tmp/deletions.json"
 
         # GitHub signs commits created through this mutation, so they show up as verified.
         query='
@@ -77,9 +87,9 @@ runs:
           --arg expectedHeadOid "$(git rev-parse HEAD)" \
           --arg message "$MESSAGE" \
           --arg body "$BODY" \
-          --argjson additions "$additions" \
-          --argjson deletions "$deletions" \
-          '{query: $query, variables: {repository: $repository, branch: $branch, expectedHeadOid: $expectedHeadOid, message: $message, body: $body, additions: $additions, deletions: $deletions}}')
+          --slurpfile additions "$tmp/additions.json" \
+          --slurpfile deletions "$tmp/deletions.json" \
+          '{query: $query, variables: {repository: $repository, branch: $branch, expectedHeadOid: $expectedHeadOid, message: $message, body: $body, additions: $additions[0], deletions: $deletions[0]}}')
 
         response=$(gh api graphql --input - <<<"$payload")
         oid=$(jq -r '.data.createCommitOnBranch.commit.oid // empty' <<<"$response")
