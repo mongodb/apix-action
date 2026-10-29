@@ -13,7 +13,6 @@
 // limitations under the License.
 
 import * as core from '@actions/core';
-import request from 'request';
 
 export async function main() {
   try {
@@ -26,28 +25,19 @@ export async function main() {
       body: comment.replace(/(\r\n|\n)/g, '\r\n')
     };
 
-    await new Promise((resolve, reject) => {
-      request({
-        url: `${apiBase}/rest/api/2/issue/${issueKey}/comment`,
-        method: "POST",
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: requestBody,
-        json: true
-      }, (err: any, response: request.Response, responseBody: any) => {
-        if (err) {
-          reject(err);
-          return;
-        }
-        if (response.statusCode >= 400) {
-          reject(new Error(response.statusCode + " " + response.statusMessage + "\n" + JSON.stringify(responseBody)));
-          return;
-        }
-        resolve(responseBody);
-      });
+    const response = await fetch(`${apiBase}/rest/api/2/issue/${issueKey}/comment`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(requestBody)
     });
+    const responseBody = await response.json();
+
+    if (!response.ok) {
+      throw new Error(`${response.status} ${response.statusText}\n${JSON.stringify(responseBody)}`);
+    }
   } catch (error) {
     if (error instanceof Error) {
       core.setFailed(error);
