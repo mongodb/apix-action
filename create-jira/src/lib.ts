@@ -13,7 +13,6 @@
 // limitations under the License.
 
 import * as core from '@actions/core';
-import request from 'request';
 import { mergeWith, isArray } from 'lodash';
 
 export interface JiraIssue {
@@ -56,33 +55,24 @@ function buildRequestBody(projectKey: string, summary: string, description: stri
   return body;
 }
 
-async function createJiraIssue(token: string, apiBase: string, projectKey: string, summary: string, description: string, issuetype: string, labels: string[], components: string[], assignee: string, extraData?: { [key: string]: any }): Promise<{ response: request.Response, responseBody: any }> {
+async function createJiraIssue(token: string, apiBase: string, projectKey: string, summary: string, description: string, issuetype: string, labels: string[], components: string[], assignee: string, extraData?: { [key: string]: any }): Promise<{ response: Response, responseBody: any }> {
   const body = buildRequestBody(projectKey, summary, description, issuetype, labels, components, assignee, extraData);
 
-  return await new Promise((resolve, reject) => {
-    request({
-      url: `${apiBase}/rest/api/2/issue`,
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer " + token,
-      },
-      body: body,
-      json: true
-    }, (err: any, response: request.Response, responseBody: any) => {
-      if (err != null) {
-        reject(err);
-        return;
-      }
-      if (response.statusCode >= 400) {
-        reject(new Error(response.statusCode + " " + response.statusMessage + "\n" + JSON.stringify(responseBody)));
-        return;
-      }
-      resolve({
-        response, responseBody
-      });
-    });
+  const response = await fetch(`${apiBase}/rest/api/2/issue`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(body)
   });
+  const responseBody = await response.json();
+
+  if (!response.ok) {
+    throw new Error(`${response.status} ${response.statusText}\n${JSON.stringify(responseBody)}`);
+  }
+
+  return { response, responseBody };
 }
 
 export async function main() {
