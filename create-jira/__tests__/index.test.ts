@@ -1,9 +1,7 @@
 import * as core from '@actions/core';
-import * as request from 'request';
-import { main, JiraIssue } from '../src/lib';
+import { main } from '../src/lib';
 
 jest.mock('@actions/core');
-jest.mock('request');
 
 describe('Create Jira Issue Action', () => {
   beforeEach(() => {
@@ -42,23 +40,23 @@ describe('Create Jira Issue Action', () => {
       }
     });
 
-    const responseMock = {
-      statusCode: 201,
-      statusMessage: 'Created',
-      body: { key: 'TEST-123' }
-    };
-
-    let requestBody: any = null;
-
-    (request as unknown as jest.Mock).mockImplementation((options, callback) => {
-      const { body } = options;
-      requestBody = body;
-      callback(null, responseMock, responseMock.body);
-    });
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ key: 'TEST-123' }), { status: 201, statusText: 'Created' })
+    );
 
     await main();
 
-    expect(requestBody).toEqual({
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://jira.example.com/rest/api/2/issue',
+      expect.objectContaining({
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer fake-token',
+        }
+      })
+    );
+    expect(JSON.parse(fetchMock.mock.calls[0][1]?.body as string)).toEqual({
       fields: {
         project: { key: 'TEST' },
         summary: 'Test issue',
@@ -69,12 +67,12 @@ describe('Create Jira Issue Action', () => {
         labels: ["bug", "urgent"]
       },
       customfield_10011: 'custom-value'
-    } as JiraIssue)
+    });
     expect(setFailedMock).not.toHaveBeenCalled();
     expect(setOutputMock).toHaveBeenCalledWith('issue-key', 'TEST-123');
   });
 
-  it('should fail if request returns an error', async () => {
+  it('should fail if fetch rejects', async () => {
     const setFailedMock = jest.spyOn(core, 'setFailed');
     const getInputMock = jest.spyOn(core, 'getInput');
 
@@ -106,10 +104,7 @@ describe('Create Jira Issue Action', () => {
     });
 
     const err = new Error('Request failed');
-
-    (request as unknown as jest.Mock).mockImplementation((options, callback) => {
-      callback(err, null, null);
-    });
+    jest.spyOn(globalThis, 'fetch').mockRejectedValue(err);
 
     await main();
 
@@ -147,18 +142,12 @@ describe('Create Jira Issue Action', () => {
       }
     });
 
-    const responseMock = {
-      statusCode: 400,
-      statusMessage: 'Bad Request',
-    };
-
     const responseBody = {
       detail: "Bad Request"
     };
-
-    (request as unknown as jest.Mock).mockImplementation((options, callback) => {
-      callback(null, responseMock, responseBody);
-    });
+    jest.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(responseBody), { status: 400, statusText: 'Bad Request' })
+    );
 
     await main();
 
