@@ -81,9 +81,6 @@ satisfy that review, the workflow arms auto-merge and stops there. This replaces
 approach that waited for the required checks inside the workflow and merged directly, which the base
 branch policy rejected.
 
-Two repository variables (Settings → Variables) configure it:
+One repository variable (Settings → Variables) configures it:
 
 - `DEPENDABOT_COMMIT_MESSAGE` — commit headline; defaults to `chore: regenerate derived files`.
-- `DEPENDABOT_AUTO_APPROVE` — set to `true` to arm auto-merge once the required checks pass;
-  defaults to off, leaving the PR for human review. (Despite the name, the app no longer approves
-  the PR.)

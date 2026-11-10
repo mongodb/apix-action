@@ -156,7 +156,7 @@ jobs:
       # A run that pushed a commit leaves enabling to the run that commit triggers, so only the
       # run on the settled head arms auto-merge.
       - name: Enable auto-merge
-        if: vars.DEPENDABOT_AUTO_APPROVE == 'true' && steps.commit.outputs.oid == ''
+        if: steps.commit.outputs.oid == ''
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           URL: ${{ github.event.pull_request.html_url }}
@@ -164,6 +164,13 @@ jobs:
           # Re-runs and Dependabot rebases reach here again; skip when the PR is closed or
           # auto-merge is already armed, since arming twice errors.
           state=$(gh pr view "$URL" --json state --jq .state)
+          if [ "$state" != "OPEN" ]; then
+            echo "PR is $state. Nothing to do"
+            exit 0
+          fi
           armed=$(gh pr view "$URL" --json autoMergeRequest --jq '.autoMergeRequest.enabledAt // empty')
-          [ "$state" = "OPEN" ] && [ -z "$armed" ] || exit 0
+          if [ -n "$armed" ]; then
+            echo "Auto-merge already enabled. Nothing to do"
+            exit 0
+          fi
           gh pr merge "$URL" --squash --auto
