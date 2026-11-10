@@ -9,7 +9,7 @@ on:
 
 jobs:
   verify-changed-files-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     name: Test Verify Changed Files Action
     steps:
       - name: Checkout
@@ -75,7 +75,7 @@ jobs:
           echo "README changed in last 5 commits: ${{ steps.verify-custom.outputs.files_changed }}"
 
   verify-changed-files-build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     name: Verify dist files are updated
     steps:
       - name: Checkout

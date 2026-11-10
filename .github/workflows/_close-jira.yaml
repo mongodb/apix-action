@@ -13,7 +13,7 @@ permissions:
 jobs:
   close-jira:
     name: Close Jira ticket
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: GitHubSecurityLab/actions-permissions/monitor@bf82d13b9b10051d224345ab9184f5ede0a94289 # v1
         with:
