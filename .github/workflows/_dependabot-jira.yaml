@@ -11,7 +11,7 @@ permissions: {}
 jobs:
   dependabot:
     name: Create Jira ticket and auto merge
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     concurrency:
       group: dependabot-jira-${{ github.event.pull_request.number }}
       cancel-in-progress: false
