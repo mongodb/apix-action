@@ -49,7 +49,7 @@ A run that finds no syncable workflows at all refuses to sync, so a misconfigure
 # Dependabot post-update task
 
 `_dependabot-jira.yaml` runs a repository's `.github/dependabot-post-update.sh` (when present)
-before approving or merging a Dependabot PR. The script is repository-owned, so sync never
+before enabling auto-merge on a Dependabot PR. The script is repository-owned, so sync never
 writes or removes it; repositories without the file skip the step.
 
 The caller triggers on `opened` and `synchronize`, so a Dependabot rebase or recreate
@@ -57,11 +57,11 @@ regenerates the derived files too. The job needs two gates. The PR author must b
 `dependabot[bot]`: an actor check cannot tell a Dependabot PR apart from the sync pull requests
 this app opens. The actor must be `dependabot[bot]` or this app's own bot, so that a push to
 the branch by anyone else starts no run, while the run this app's own post-update commit
-triggers still qualifies. That follow-up run is the one that approves, because only by then has
-the PR head caught up with the commit that was just pushed. The script itself still runs only
-for `dependabot[bot]`, so that
-follow-up run does not regenerate a second time, and a run that pushed a commit skips approving
-so that only the settled head is approved. Two further guards
+triggers still qualifies. That follow-up run is the one that enables auto-merge, because only by
+then has the PR head caught up with the commit that was just pushed. The script itself still runs
+only for `dependabot[bot]`, so that
+follow-up run does not regenerate a second time, and a run that pushed a commit skips enabling
+auto-merge so that only the settled head's run arms it. Two further guards
 make the re-runs safe: the ticket, comment, and `auto_close_jira` label steps are skipped once
 the PR already carries the tracking comment, so no duplicate tickets are filed — the check reads
 the PR's current comments rather than the event payload, which a re-run freezes at run-creation
@@ -74,13 +74,13 @@ The script only edits files in the checked-out PR branch — no git commands. Th
 the result, writes the commit message, and creates the commit through the GitHub API
 (`createCommitOnBranch`), so GitHub signs it and it shows as Verified.
 
-Merging arms auto-merge (`gh pr merge --squash --auto`) once the app has approved, so GitHub waits
-for the required status checks and the required review before merging. This replaces an earlier
+Merging only enables auto-merge (`gh pr merge --squash --auto`), so GitHub waits for the required
+status checks and the required review before merging. The app does not approve the PR, so the
+required review must still come from a human code owner; pending security approval to let apix-bot
+satisfy that review, the workflow arms auto-merge and stops there. This replaces an earlier
 approach that waited for the required checks inside the workflow and merged directly, which the base
 branch policy rejected.
 
-Two repository variables (Settings → Variables) configure it:
+One repository variable (Settings → Variables) configures it:
 
 - `DEPENDABOT_COMMIT_MESSAGE` — commit headline; defaults to `chore: regenerate derived files`.
-- `DEPENDABOT_AUTO_APPROVE` — set to `true` to approve and arm auto-merge once the required checks
-  pass; defaults to off, leaving the PR for human review.
