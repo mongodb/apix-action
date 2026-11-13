@@ -16,7 +16,11 @@
 name: Auto Close Jira
 
 on:
-  pull_request:
+  # `pull_request` never fires for a PR with merge conflicts, so a Dependabot PR that
+  # Dependabot closes after main overtook it would leave its ticket open.
+  # `pull_request_target` needs no merge commit. It is safe here because the job only
+  # reads PR metadata and never checks out or runs code from the PR.
+  pull_request_target:
     types: [closed]
 
 permissions: {}
