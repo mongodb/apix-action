@@ -15,15 +15,22 @@
 
 name: Auto Close Jira
 
+# pull_request_target, not pull_request: GitHub never starts pull_request workflows for a PR
+# with merge conflicts, so a conflicting PR closed unmerged (such as a Dependabot PR superseded
+# on the base branch) would leave its ticket open. This is safe because the job never checks out
+# or runs PR code. Fork PRs are skipped, since under this event they would get secrets and
+# control the branch name the Jira key is read from.
 on:
-  pull_request:
+  pull_request_target:
     types: [closed]
 
 permissions: {}
 
 jobs:
   close-jira:
-    if: contains(github.event.pull_request.labels.*.name, 'auto_close_jira')
+    if: >-
+      contains(github.event.pull_request.labels.*.name, 'auto_close_jira') &&
+      github.event.pull_request.head.repo.full_name == github.repository
     permissions:
       contents: read
       pull-requests: read
