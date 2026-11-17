@@ -60,11 +60,10 @@ async fn main() -> Result<()> {
     // Local `./` references point back at this repository, so rewrite them to permalinks
     // into it, pinned to the latest release.
     let source_root = env::current_dir().context("reading working directory")?;
-    let rewriter = local_refs::Rewriter::new(
-        args.source_repository.clone(),
-        source_root.clone(),
-        local_refs::release_ref(&source_root)?,
-    );
+    let release = local_refs::release_ref(&source_root)?;
+    let release_label = format!("{} @ {}", release.tag, release.sha);
+    let rewriter =
+        local_refs::Rewriter::new(args.source_repository.clone(), source_root.clone(), release);
 
     let release_directory = workflows_directory
         .strip_prefix(&source_root)
@@ -108,12 +107,23 @@ async fn main() -> Result<()> {
     .await?;
     info!("sync complete");
 
+    // Only create pull requests for repositories whose working tree changed.
+    let repositories_needing_pr = sync::repositories_needing_pr(&repositories, &targets_directory)?;
+
+    // Render what the run would publish and stop before the first GitHub mutation.
+    if args.dry_run {
+        println!("Pinning references to release {release_label}\n");
+        print!(
+            "{}",
+            prs::dry_run(&repositories_needing_pr, &targets_directory)?
+        );
+        return Ok(());
+    }
+
     // Ensure every target has `apix-action`, which the PR phase uses to find old generated PRs.
     labels::ensure(&workflows, token.clone()).await?;
     info!("labels are present in all repositories");
 
-    // Only create pull requests for repositories whose working tree changed.
-    let repositories_needing_pr = sync::repositories_needing_pr(&repositories, &targets_directory)?;
     let repositories = repositories_needing_pr
         .iter()
         .map(|repository| format!("{}/{}", repository.owner, repository.repository))

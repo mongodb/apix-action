@@ -1,0 +1,73 @@
+name: Sync dry run
+
+# Temporary: runs sync end to end but stops before the first GitHub mutation and renders
+# the pull requests a real run would open. Read-only against targets; opens nothing.
+on:
+  # `workflow_dispatch` only appears in the Actions UI once this file is on `main`, so a
+  # branch can only be exercised by `push`. The dispatch trigger is kept for once it lands.
+  push:
+    branches:
+      - pin-synced-refs-to-release-tag
+  workflow_dispatch:
+    inputs:
+      owner:
+        description: Owner to run against
+        required: true
+        default: mongodb
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  dry-run:
+    name: Render sync changes
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: 1password/load-secrets-action@70062d7a876d3eb6334754fa26efd2fbd90c32f2 # v5
+        id: load-secrets
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          APP_ID: "op://APIx/APIx Github Bot/App ID"
+          APP_SECRET: "op://APIx/APIx Github Bot/App Secret"
+      - id: decode-app-secret
+        run: |
+          {
+            echo 'APP_PEM<<EOF'
+            echo "${{ steps.load-secrets.outputs.APP_SECRET }}" | base64 -d | openssl pkey -inform DER -outform PEM
+            echo EOF
+          } >> "$GITHUB_OUTPUT"
+      - name: Set APIX bot token
+        id: app-token
+        uses: $/token
+        with:
+          app-id: ${{ steps.load-secrets.outputs.APP_ID }}
+          private-key: ${{ steps.decode-app-secret.outputs.APP_PEM }}
+          owner: ${{ inputs.owner || 'mongodb' }}
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The release tag is read from the clone, and a shallow clone carries no tags.
+          fetch-depth: 0
+          token: ${{ steps.app-token.outputs.token }}
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@4360b52568e2003a75bf9bc1d59f33a8e3fc893c # stable
+      - name: Install just
+        run: cargo install just --locked
+      - name: Build
+        run: just build
+      - name: Render sync changes
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          SYNC_OWNER: ${{ inputs.owner || 'mongodb' }}
+          WORKFLOW_DIRECTORY: .github/workflows
+        run: |
+          chmod +x bin/sync
+          bin/sync --dry-run > dry-run.md
+          cat dry-run.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sync-dry-run
+          path: dry-run.md

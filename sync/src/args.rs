@@ -39,6 +39,10 @@ pub struct Args {
     /// Write created pull requests as JSON to a file.
     #[arg(long, value_name = "FILE")]
     pub json: Option<PathBuf>,
+
+    /// Print the pull requests a run would open, without touching GitHub.
+    #[arg(long)]
+    pub dry_run: bool,
 }
 
 #[derive(Subcommand, Debug)]
