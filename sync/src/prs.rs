@@ -6,7 +6,7 @@ use std::{
 
 use anyhow::{Context, Result, bail};
 use base64::{Engine, engine::general_purpose::STANDARD};
-use git2::{DiffFormat, DiffOptions, Repository, Status, StatusOptions};
+use git2::{Repository, Status, StatusOptions};
 use octocrab::{Octocrab, models::IssueState, params, params::repos::Reference};
 use redacted::FullyRedacted;
 use serde::{Deserialize, Serialize};
@@ -269,57 +269,6 @@ fn statuses(path: &Path) -> Result<Vec<(String, Status)>> {
         .collect()
 }
 
-/// Render, without touching GitHub, the pull requests a run would open.
-pub fn dry_run(repositories: &[Repo], targets: impl AsRef<Path>) -> Result<String> {
-    let targets = targets.as_ref();
-    if repositories.is_empty() {
-        return Ok("No repositories would change.\n".to_string());
-    }
-
-    let mut output = String::new();
-    for repository in repositories {
-        let path = targets
-            .join(repository.owner.as_str())
-            .join(repository.repository.as_str());
-        let actions = changed_workflows(&path).with_context(|| {
-            format!(
-                "finding changed workflows for {}/{}",
-                repository.owner, repository.repository
-            )
-        })?;
-        output.push_str(&format!(
-            "## `{}/{}`\n\n**{TITLE}**\n\n{}\n\n```diff\n{}\n```\n\n",
-            repository.owner,
-            repository.repository,
-            description(&actions),
-            patch(&path)?,
-        ));
-    }
-    Ok(output)
-}
-
-// Unified patch of a checkout's working tree against its index.
-fn patch(path: &Path) -> Result<String> {
-    let repository = Repository::open(path).context("opening repository")?;
-    let mut options = DiffOptions::new();
-    options.include_untracked(true).recurse_untracked_dirs(true);
-    let diff = repository
-        .diff_index_to_workdir(None, Some(&mut options))
-        .context("diffing working tree")?;
-
-    let mut patch = String::new();
-    diff.print(DiffFormat::Patch, |_, _, line| {
-        // Content lines carry their `+`/`-`/space only in the origin, not the content.
-        if matches!(line.origin(), '+' | '-' | ' ') {
-            patch.push(line.origin());
-        }
-        patch.push_str(&String::from_utf8_lossy(line.content()));
-        true
-    })
-    .context("rendering diff")?;
-    Ok(patch)
-}
-
 // Read statuses before publish_changes commits them.
 fn changed_workflows(path: &Path) -> Result<ChangedWorkflows> {
     let mut actions = ChangedWorkflows::default();
@@ -550,57 +499,11 @@ mod tests {
     use std::{fs, time::SystemTime};
 
     use anyhow::Result;
-    use non_empty_string::NonEmptyString;
 
     use super::{
-        ChangedWorkflows, CreatedPullRequest, changed_workflows, description, dry_run,
-        file_changes, summary_directory,
+        ChangedWorkflows, CreatedPullRequest, changed_workflows, description, file_changes,
+        summary_directory,
     };
-    use crate::shared::Repo;
-
-    fn repo(name: &str) -> Repo {
-        // Safe: both values are non-empty test literals.
-        Repo::new(
-            NonEmptyString::new("owner".to_string()).expect("non-empty owner"),
-            NonEmptyString::new(name.to_string()).expect("non-empty repository"),
-        )
-    }
-
-    #[test]
-    fn dry_run_renders_title_description_and_diff() -> Result<()> {
-        let unique = SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)?
-            .as_nanos();
-        let targets =
-            std::env::temp_dir().join(format!("apix-dry-run-{}-{unique}", std::process::id()));
-        let checkout = targets.join("owner/repository");
-        let workflows = checkout.join(".github/workflows");
-        fs::create_dir_all(&workflows)?;
-        fs::write(workflows.join("kept.yaml"), "old\n")?;
-
-        let repository = git2::Repository::init(&checkout)?;
-        let mut index = repository.index()?;
-        index.add_all(["*"], git2::IndexAddOption::DEFAULT, None)?;
-        index.write()?;
-        let tree = repository.find_tree(index.write_tree()?)?;
-        let signature = git2::Signature::now("test", "test@example.com")?;
-        repository.commit(Some("HEAD"), &signature, &signature, "init", &tree, &[])?;
-
-        fs::write(workflows.join("kept.yaml"), "uses: ./x.yaml@sha # v18\n")?;
-        fs::write(workflows.join("added.yaml"), "name: added\n")?;
-
-        let output = dry_run(&[repo("repository")], &targets)?;
-
-        assert!(output.contains("**ci: apix-action updates**"));
-        assert!(output.contains("## Actions changed"));
-        assert!(output.contains("+uses: ./x.yaml@sha # v18"));
-        assert!(output.contains("added.yaml"));
-
-        assert_eq!(dry_run(&[], &targets)?, "No repositories would change.\n");
-
-        fs::remove_dir_all(targets)?;
-        Ok(())
-    }
 
     #[test]
     fn description_lists_changed_actions() {
