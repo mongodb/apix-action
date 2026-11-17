@@ -57,16 +57,19 @@ async fn main() -> Result<()> {
 
     let owner = args.owner.as_deref();
 
-    // Local `./` references resolve against the checkout root, and only here. Rewrite them
-    // to permalinks so target repositories call back into this repository.
+    // Local `./` references point back at this repository, so rewrite them to permalinks
+    // into it, pinned to the latest release.
     let source_root = env::current_dir().context("reading working directory")?;
     let rewriter = local_refs::Rewriter::new(
         args.source_repository.clone(),
         source_root.clone(),
-        local_refs::head_sha(&source_root)?,
+        local_refs::release_ref(&source_root)?,
     );
 
-    let scanned = scan::scan(workflows_directory, &rewriter).await?;
+    let release_directory = workflows_directory
+        .strip_prefix(&source_root)
+        .unwrap_or(&workflows_directory);
+    let scanned = scan::scan(release_directory, &rewriter)?;
     // Checked before the owner filter below. An owner with no workflows left is
     // legitimate: everything it had was retired, and its copies should be swept. A source
     // tree with none is indistinguishable from a wrong WORKFLOW_DIRECTORY, and sweeping on

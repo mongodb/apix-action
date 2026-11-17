@@ -13,14 +13,6 @@ jobs:
     outputs:
       owners: ${{ steps.owners.outputs.owners }}
     steps:
-      # Local references are rewritten to the commit being synced. Dispatched from a
-      # branch, that commit may never reach main, leaving every target pointing at a
-      # permalink that dies with the branch.
-      - name: Require main
-        if: github.ref != 'refs/heads/main'
-        run: |
-          echo "sync must be dispatched from main, got ${{ github.ref }}" >&2
-          exit 1
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Install Rust
@@ -87,6 +79,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          # References are pinned to the latest release tag, and a shallow clone carries
+          # no tags at all.
+          fetch-depth: 0
           token: ${{ steps.app-token.outputs.token }}
       - name: Download sync binary
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2

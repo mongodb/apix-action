@@ -15,16 +15,14 @@ uses: ./.github/workflows/_close-jira.yaml
 
 Do not pin `mongodb/apix-action/...@<sha>` by hand. Sync rewrites each `./` or `$/` reference
 to a permalink when it writes the file into a target, pinning every reference in the run to
-the commit being synced. So the permalink always matches the content being shipped, and
-dependabot has no self-reference to bump here.
+the highest `v<number>` release tag. The tag travels with the pin as a trailing comment
+(`@<sha> # v18`), so the reference stays immutable while dependabot has a version to bump.
 
-Because the pin is the synced commit, any run where `main` has moved rewrites every synced
-caller and opens a pull request per target, even when the reusable workflow itself did not
-change.
-
-Sync must be dispatched from `main`; the workflow fails otherwise. A commit on a branch may
-never reach `main`, which would leave targets pinned to a permalink that dies with the
-branch.
+A run ships the release's content: both the caller bodies written to targets and the pins
+inside them come from the latest tag, not from the dispatched commit. So a run that only moves
+`main` rewrites nothing and opens no pull request, and targets move only when a new tag is cut.
+Merge changes and cut a tag before dispatching: a caller that passes an input the pinned
+release's reusable workflow does not have fails at runtime in every target.
 
 A `./` or `$/` reference that does not exist fails the run rather than shipping a broken
 `uses:`, since the unrewritten form would resolve against the target repository.
